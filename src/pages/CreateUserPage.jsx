@@ -9,6 +9,7 @@ import LinkButton from '../components/LinkButton';
 import googleIcon from '../assets/googleLogo.png';
 import { useI18n } from '../i18n/useI18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { getGoogleIdToken } from '../lib/googleIdentity';
 
 export default function CreateUserPage() {
   const [firstName, setFirstName] = useState('');
@@ -19,10 +20,10 @@ export default function CreateUserPage() {
   const [secretQuestion, setSecretQuestion] = useState('');
   const [secretAnswer, setSecretAnswer] = useState('');
   const navigate = useNavigate();
-  const { addNotification } = useApp();
+  const { addNotification, register, googleLogin } = useApp();
   const { t, isRTL } = useI18n();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -35,17 +36,43 @@ export default function CreateUserPage() {
       return;
     }
 
-    const currentUserCount = localStorage.getItem('userCount') || 0;
-    const newUserCount = parseInt(currentUserCount, 10) + 1;
+    const response = await register({
+      firstName,
+      lastName,
+      email,
+      password,
+      secretQuestion,
+      secretAnswer
+    });
 
-    if (newUserCount <= 50) {
-      localStorage.setItem('userCount', newUserCount.toString());
-      addNotification(t('auth.userCreatedBonus', { count: newUserCount }), 'success');
-    } else {
-      addNotification(t('auth.userCreated'), 'success');
+    if (!response.success) {
+      return;
     }
 
-    setTimeout(() => navigate('/me'), 2500);
+    addNotification(t('auth.userCreated'), 'success');
+    navigate('/me');
+  }
+
+
+  async function handleGoogleSignup() {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      addNotification(t('auth.googleMissingClientId'), 'error');
+      return;
+    }
+
+    try {
+      const googleToken = await getGoogleIdToken(clientId);
+      const response = await googleLogin(googleToken);
+      if (!response.success) {
+        return;
+      }
+
+      addNotification(t('auth.googleLoginSuccess'), 'success');
+      navigate('/me');
+    } catch (error) {
+      addNotification(error.message || t('auth.googleLoginFailed'), 'error');
+    }
   }
 
   return (
@@ -60,7 +87,7 @@ export default function CreateUserPage() {
           <p style={{ marginTop: 0, marginBottom: 16, color: '#666' }}>{t('auth.signUpToGetStarted')}</p>
 
           <div style={{ display: 'grid', gap: 12 }}>
-            <Button type="button" onClick={() => addNotification(t('auth.googleSignupMock'), 'info')}>
+            <Button type="button" onClick={handleGoogleSignup}>
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 {t('auth.continueWithGoogle')}
                 <img src={googleIcon} alt="Google" style={{ width: 18, height: 18, objectFit: 'contain' }} />

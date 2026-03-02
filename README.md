@@ -1,16 +1,37 @@
-# React + Vite
+# TokenLearn Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend app for TokenLearn built with React + Vite.
 
-Currently, two official plugins are available:
+## Environment variables
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Create a `.env` file (or `.env.local`) with:
 
-## React Compiler
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+VITE_GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `VITE_API_BASE_URL` is the backend base URL used by the client for all auth calls.
+- `VITE_GOOGLE_CLIENT_ID` must match `google.client-id` configured on the backend.
 
-## Expanding the ESLint configuration
+## Google login flow
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+When users click **Continue with Google**, the client:
+1. Loads Google Identity Services.
+2. Gets an ID token (`credential`) from Google.
+3. Sends it to `POST /api/auth/google` as:
+
+```json
+{ "googleToken": "<google_id_token>" }
+```
+
+The client then stores the JWT returned by the backend and uses it as a Bearer token for subsequent API calls.
+
+## Scripts
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+```
