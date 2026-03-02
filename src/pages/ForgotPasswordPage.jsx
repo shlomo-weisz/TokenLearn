@@ -8,14 +8,10 @@ import LinkButton from '../components/LinkButton';
 import { useI18n } from '../i18n/useI18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
-const mockUsers = [
-  { email: 'john@example.com', secretQuestion: "What is your pet's name?", secretAnswer: 'max' },
-  { email: 'jane@example.com', secretQuestion: 'What city were you born in?', secretAnswer: 'haifa' }
-];
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const { addNotification } = useApp();
+  const { addNotification, getSecretQuestion, verifySecretAnswer, resetPassword } = useApp();
   const { t, isRTL } = useI18n();
 
   const [step, setStep] = useState(1);
@@ -27,32 +23,36 @@ export default function ForgotPasswordPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [resetToken, setResetToken] = useState('');
 
-  function handleEmailSubmit(e) {
+  async function handleEmailSubmit(e) {
     e.preventDefault();
     setError('');
-    const foundUser = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
-    if (!foundUser) {
-      setError(t('auth.emailNotFound'));
+
+    const response = await getSecretQuestion(email.trim());
+    if (!response.success) {
+      setError(response.error?.message || t('auth.emailNotFound'));
       return;
     }
-    setCurrentUser(foundUser);
+
+    setCurrentUser(response.data);
     setStep(2);
   }
 
-  function handleAnswerSubmit(e) {
+  async function handleAnswerSubmit(e) {
     e.preventDefault();
     setError('');
 
-    if (answer.toLowerCase().trim() === currentUser.secretAnswer.toLowerCase()) {
-      setResetToken(`mock_reset_token_${Date.now()}`);
-      setStep(3);
-    } else {
-      setError(t('auth.incorrectAnswer'));
+    const response = await verifySecretAnswer(email.trim(), answer.trim());
+    if (!response.success || !response.data?.verified) {
+      setError(response.error?.message || t('auth.incorrectAnswer'));
       setAnswer('');
+      return;
     }
+
+    setResetToken(response.data.resetToken);
+    setStep(3);
   }
 
-  function handleResetPassword(e) {
+  async function handleResetPassword(e) {
     e.preventDefault();
     setError('');
 
@@ -66,7 +66,12 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    console.log('Resetting password with token:', resetToken);
+    const response = await resetPassword(email.trim(), resetToken, newPassword);
+    if (!response.success) {
+      setError(response.error?.message || t('auth.requestFailed'));
+      return;
+    }
+
     addNotification(t('auth.passwordResetSuccessToast'), 'success');
     setStep(4);
   }
@@ -105,7 +110,7 @@ export default function ForgotPasswordPage() {
             <div style={{ display: 'grid', gap: 12 }}>
               <div style={{ padding: 12, backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, marginBottom: 8 }}>
                 <strong>{t('auth.secretQuestionLabel')}</strong>
-                <div style={{ marginTop: 6 }}>{currentUser.secretQuestion}</div>
+                <div style={{ marginTop: 6 }}>{currentUser?.secretQuestion}</div>
               </div>
 
               <Input label={t('auth.yourAnswer')} type="text" value={answer} onChange={setAnswer} placeholder="..." />

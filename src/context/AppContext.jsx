@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppContext } from './AppContextBase';
+import { apiRequest, normalizeAuthPayload, setStoredAuthToken } from '../lib/apiClient';
 
 const DEFAULT_LESSON_TOKEN_COST = 1;
 
@@ -398,27 +399,46 @@ export function AppProvider({ children }) {
   // Authentication operations (stubs for future API integration)
   const login = async (email, password) => {
     return apiCall(async () => {
-      // Here: POST /api/auth/login
-      console.log('Logging in:', { email, hasPassword: Boolean(password) });
-      // In real app: return { token, user }
+      const payload = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+
+      const { token, user: currentUser } = normalizeAuthPayload(payload);
+      setStoredAuthToken(token);
+      if (currentUser) {
+        setUser((prev) => ({ ...prev, ...currentUser }));
+      }
+
       addNotification('Logged in successfully!', 'success');
-      return { token: 'mock_token', user };
+      return payload;
     });
   };
 
   const register = async (userData) => {
     return apiCall(async () => {
-      // Here: POST /api/auth/register
-      console.log('Registering:', userData);
+      const payload = await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+      });
+
+      const { token, user: currentUser } = normalizeAuthPayload(payload);
+      setStoredAuthToken(token);
+      if (currentUser) {
+        setUser((prev) => ({ ...prev, ...currentUser }));
+      }
+
       addNotification('Account created successfully!', 'success');
-      return { token: 'mock_token', user: { ...user, ...userData }, isFirstFiftyUser: true, bonusTokens: 50 };
+      return payload;
     });
   };
 
   const logout = async () => {
     return apiCall(async () => {
-      // Here: POST /api/auth/logout
-      console.log('Logging out');
+      await apiRequest('/api/auth/logout', {
+        method: 'POST'
+      });
+      setStoredAuthToken(null);
       addNotification('Logged out successfully', 'info');
       return { message: 'Logged out successfully' };
     });
@@ -426,48 +446,59 @@ export function AppProvider({ children }) {
 
   const getSecretQuestion = async (email) => {
     return apiCall(async () => {
-      // Here: POST /api/auth/secret-question
-      console.log('Getting secret question for:', email);
-      return { secretQuestion: 'What is your pet\'s name?' };
+      return apiRequest('/api/auth/secret-question', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      });
     });
   };
 
   const verifySecretAnswer = async (email, secretAnswer) => {
     return apiCall(async () => {
-      // Here: POST /api/auth/verify-secret-answer
-      console.log('Verifying secret answer for:', { email, hasSecretAnswer: Boolean(secretAnswer) });
-      return { verified: true, resetToken: 'mock_reset_token' };
+      return apiRequest('/api/auth/verify-secret-answer', {
+        method: 'POST',
+        body: JSON.stringify({ email, secretAnswer })
+      });
     });
   };
 
   const resetPassword = async (email, resetToken, newPassword) => {
     return apiCall(async () => {
-      // Here: POST /api/auth/reset-password
-      console.log('Resetting password for:', { email, hasResetToken: Boolean(resetToken), hasNewPassword: Boolean(newPassword) });
+      const payload = await apiRequest('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, resetToken, newPassword })
+      });
       addNotification('Password reset successfully!', 'success');
-      return { message: 'Password reset successfully' };
+      return payload;
     });
   };
 
   const googleLogin = async (googleToken) => {
     return apiCall(async () => {
-      // Here: POST /api/auth/google
-      console.log('Google login:', { hasGoogleToken: Boolean(googleToken) });
-      return { token: 'mock_google_token', user };
+      const payload = await apiRequest('/api/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ googleToken })
+      });
+
+      const { token, user: currentUser } = normalizeAuthPayload(payload);
+      setStoredAuthToken(token);
+      if (currentUser) {
+        setUser((prev) => ({ ...prev, ...currentUser }));
+      }
+
+      return payload;
     });
   };
 
   const verifyToken = async () => {
-    return apiCall(async () => {
-      // Here: GET /api/auth/verify
-      return { valid: true, user };
-    });
+    return apiCall(async () => apiRequest('/api/auth/verify'));
   };
 
   const getCurrentUserProfile = async () => {
     return apiCall(async () => {
-      // Here: GET /api/users/me
-      return user;
+      const payload = await apiRequest('/api/users/me');
+      setUser((prev) => ({ ...prev, ...payload }));
+      return payload;
     });
   };
 

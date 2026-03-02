@@ -9,21 +9,42 @@ import LinkButton from '../components/LinkButton';
 import googleIcon from '../assets/googleLogo.png';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useI18n } from '../i18n/useI18n';
+import { getGoogleIdToken } from '../lib/googleIdentity';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
-  const { addNotification } = useApp();
+  const { addNotification, login, googleLogin } = useApp();
   const { t, isRTL } = useI18n();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    const response = await login(email, password);
+    if (!response.success) {
+      return;
+    }
     navigate('/home');
   }
 
-  function handleGoogleLogin() {
-    addNotification(t('auth.googleLoginMock'), 'info');
+  async function handleGoogleLogin() {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      addNotification(t('auth.googleMissingClientId'), 'error');
+      return;
+    }
+
+    try {
+      const googleToken = await getGoogleIdToken(clientId);
+      const response = await googleLogin(googleToken);
+      if (!response.success) {
+        return;
+      }
+      addNotification(t('auth.googleLoginSuccess'), 'success');
+      navigate('/home');
+    } catch (error) {
+      addNotification(error.message || t('auth.googleLoginFailed'), 'error');
+    }
   }
 
   return (
