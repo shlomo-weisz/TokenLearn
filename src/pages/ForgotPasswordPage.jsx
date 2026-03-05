@@ -7,12 +7,13 @@ import Card from '../components/Card';
 import LinkButton from '../components/LinkButton';
 import { useI18n } from '../i18n/useI18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { translateErrorMessage } from '../lib/errorMessages';
 
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
   const { addNotification, getSecretQuestion, verifySecretAnswer, resetPassword } = useApp();
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language } = useI18n();
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export default function ForgotPasswordPage() {
 
     const response = await getSecretQuestion(email.trim());
     if (!response.success) {
-      setError(response.error?.message || t('auth.emailNotFound'));
+      setError(translateErrorMessage(response.error, language) || t('auth.emailNotFound'));
       return;
     }
 
@@ -43,7 +44,7 @@ export default function ForgotPasswordPage() {
 
     const response = await verifySecretAnswer(email.trim(), answer.trim());
     if (!response.success || !response.data?.verified) {
-      setError(response.error?.message || t('auth.incorrectAnswer'));
+      setError(translateErrorMessage(response.error, language) || t('auth.incorrectAnswer'));
       setAnswer('');
       return;
     }
@@ -68,7 +69,7 @@ export default function ForgotPasswordPage() {
 
     const response = await resetPassword(email.trim(), resetToken, newPassword);
     if (!response.success) {
-      setError(response.error?.message || t('auth.requestFailed'));
+      setError(translateErrorMessage(response.error, language) || t('auth.requestFailed'));
       return;
     }
 

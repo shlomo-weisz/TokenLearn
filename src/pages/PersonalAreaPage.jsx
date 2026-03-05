@@ -6,6 +6,36 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import CourseAutocomplete from "../components/CourseAutocomplete";
 import { useI18n } from "../i18n/useI18n";
 import { dedupeCoursesById, normalizeCourse } from "../lib/courseUtils";
+import { normalizeDayToEnglish } from "../lib/dayUtils";
+import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl } from "../lib/validation";
+
+const EN_DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const HE_DAY_BY_EN = {
+  Sunday: "ראשון",
+  Monday: "שני",
+  Tuesday: "שלישי",
+  Wednesday: "רביעי",
+  Thursday: "חמישי",
+  Friday: "שישי",
+  Saturday: "שבת"
+};
+const EN_DAY_BY_HE = Object.fromEntries(Object.entries(HE_DAY_BY_EN).map(([en, he]) => [he, en]));
+
+const toApiDay = (day) => EN_DAY_BY_HE[day] || day;
+
+const toDisplayDay = (day, daysOfWeek) => {
+  if (!day) {
+    return "";
+  }
+  const normalizedDayEn = normalizeDayToEnglish(day);
+  if (!normalizedDayEn) {
+    return "";
+  }
+  if (Array.isArray(daysOfWeek) && daysOfWeek.includes(normalizedDayEn)) {
+    return normalizedDayEn;
+  }
+  return HE_DAY_BY_EN[normalizedDayEn] || normalizedDayEn;
+};
 
 const cardStyle = {
   background: "linear-gradient(135deg, #ffffff 0%, #f4f7ff 100%)",
@@ -39,7 +69,7 @@ const normalizeAvailability = (availability, fallbackId, daysOfWeek) => {
   const groupedByTime = new Map();
 
   availability.forEach((slot, index) => {
-    const day = slot?.day || "";
+    const day = toDisplayDay(slot?.day || "", daysOfWeek);
     const startTime = slot?.startTime || "";
     const endTime = slot?.endTime || "";
     const key = `${startTime}|${endTime}`;
@@ -70,14 +100,14 @@ const normalizeAvailability = (availability, fallbackId, daysOfWeek) => {
 };
 
 const expandAvailabilitySlots = (availabilitySlots = []) => (
-  availabilitySlots.flatMap((slot) => {
+  Array.from(new Map(availabilitySlots.flatMap((slot) => {
     const days = Array.isArray(slot?.days) ? slot.days : [];
     return days.map((day) => ({
-      day,
+      day: toApiDay(day),
       startTime: slot.startTime,
       endTime: slot.endTime
     }));
-  })
+  }).map((item) => [`${item.day}|${item.startTime}|${item.endTime}`, item])).values())
 );
 
 
@@ -86,7 +116,7 @@ export default function PersonalAreaPage() {
   const { language } = useI18n();
   const isHe = language === "he";
   const { user, updateUserProfile, loading, addNotification, getCourses } = useApp();
-  const DAYS_OF_WEEK = isHe ? ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const DAYS_OF_WEEK = isHe ? ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] : EN_DAYS_OF_WEEK;
   const dayIndex = new Map(DAYS_OF_WEEK.map((day, index) => [day, index]));
   
   // Initialize state directly from user data
@@ -94,6 +124,7 @@ export default function PersonalAreaPage() {
   const [lastName, setLastName] = useState(user?.lastName || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [photoUrl, setPhotoUrl] = useState(user?.photoUrl || "");
+  const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const objectUrlRef = useRef(null);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -144,6 +175,10 @@ export default function PersonalAreaPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setPhotoLoadFailed(false);
+  }, [photoUrl]);
+
   function addCourseAsTeacher() {
     setHasChanges(true);
     setCoursesAsTeacher([...coursesAsTeacher, { id: Date.now(), course: null }]);
@@ -157,9 +192,22 @@ export default function PersonalAreaPage() {
   }
 
   function updateCourseAsTeacher(id, selectedCourse) {
+    const normalized = normalizeCourse(selectedCourse);
+    if (Number.isInteger(normalized?.id)) {
+      const isDuplicate = coursesAsTeacher.some((row) => (
+        row.id !== id && normalizeCourse(row.course)?.id === normalized.id
+      ));
+      if (isDuplicate) {
+        addNotification(
+          isHe ? "הקורס הזה כבר נבחר ברשימת הקורסים ללימוד." : "This course is already selected in courses you teach.",
+          "error"
+        );
+        return;
+      }
+    }
     setHasChanges(true);
     setCoursesAsTeacher(coursesAsTeacher.map(c =>
-      c.id === id ? { ...c, course: normalizeCourse(selectedCourse) } : c
+      c.id === id ? { ...c, course: normalized } : c
     ));
   }
 
@@ -176,9 +224,22 @@ export default function PersonalAreaPage() {
   }
 
   function updateCourseAsStudent(id, selectedCourse) {
+    const normalized = normalizeCourse(selectedCourse);
+    if (Number.isInteger(normalized?.id)) {
+      const isDuplicate = coursesAsStudent.some((row) => (
+        row.id !== id && normalizeCourse(row.course)?.id === normalized.id
+      ));
+      if (isDuplicate) {
+        addNotification(
+          isHe ? "הקורס הזה כבר נבחר ברשימת הקורסים ללמידה." : "This course is already selected in courses you learn.",
+          "error"
+        );
+        return;
+      }
+    }
     setHasChanges(true);
     setCoursesAsStudent(coursesAsStudent.map(c =>
-      c.id === id ? { ...c, course: normalizeCourse(selectedCourse) } : c
+      c.id === id ? { ...c, course: normalized } : c
     ));
   }
 
@@ -254,6 +315,51 @@ export default function PersonalAreaPage() {
       return;
     }
 
+    const cleanFirstName = firstName.trim();
+    const cleanLastName = lastName.trim();
+    const cleanPhone = phone.trim();
+    const cleanPhotoUrl = photoUrl.trim();
+
+    if (!isValidName(cleanFirstName) || !isValidName(cleanLastName)) {
+      addNotification(
+        isHe
+          ? "שם פרטי ושם משפחה יכולים להכיל אותיות, רווחים, מקף וגרש בלבד."
+          : "First and last name can contain letters, spaces, apostrophes and hyphens only.",
+        "error"
+      );
+      return;
+    }
+
+    if (!isValidPhone(cleanPhone)) {
+      addNotification(
+        isHe
+          ? "מספר טלפון לא תקין. אפשר להשתמש בספרות, רווחים, סוגריים, מקף ו-+."
+          : "Invalid phone number. Use digits with optional spaces, parentheses, hyphens and +.",
+        "error"
+      );
+      return;
+    }
+
+    if (!isValidPhotoUrl(cleanPhotoUrl)) {
+      addNotification(
+        isHe
+          ? "קישור התמונה חייב להיות URL תקין."
+          : "Photo URL must be valid.",
+        "error"
+      );
+      return;
+    }
+
+    if (!isSafeFreeText(aboutMeAsTeacher, 2000) || !isSafeFreeText(aboutMeAsStudent, 2000)) {
+      addNotification(
+        isHe
+          ? "שדות \"עליי\" כוללים קלט לא תקין."
+          : "About fields contain invalid input.",
+        "error"
+      );
+      return;
+    }
+
     // Validate courses
     const validCoursesTeacher = coursesAsTeacher
       .map((row) => normalizeCourse(row.course))
@@ -264,7 +370,46 @@ export default function PersonalAreaPage() {
       .filter((course) => Number.isInteger(course?.id))
       .map((course) => ({ id: course.id }));
 
+    if (new Set(validCoursesTeacher.map((course) => course.id)).size !== validCoursesTeacher.length) {
+      addNotification(
+        isHe ? "יש כפילויות בקורסים ללימוד. יש לבחור כל קורס פעם אחת בלבד." : "Duplicate courses found in teaching list. Please select each course once.",
+        "error"
+      );
+      return;
+    }
+
+    if (new Set(validCoursesStudent.map((course) => course.id)).size !== validCoursesStudent.length) {
+      addNotification(
+        isHe ? "יש כפילויות בקורסים ללמידה. יש לבחור כל קורס פעם אחת בלבד." : "Duplicate courses found in learning list. Please select each course once.",
+        "error"
+      );
+      return;
+    }
+
     // Validate availability
+    const hasIncompleteTeacherAvailability = availabilityAsTeacher.some((slot) => {
+      const days = Array.isArray(slot.days) ? slot.days : [];
+      const hasDays = days.length > 0;
+      const hasStart = Boolean(slot.startTime);
+      const hasEnd = Boolean(slot.endTime);
+      const hasAnyTime = hasStart || hasEnd;
+
+      if (!hasDays && !hasAnyTime) {
+        return false;
+      }
+
+      return !hasDays || !hasStart || !hasEnd;
+    });
+    if (hasIncompleteTeacherAvailability) {
+      addNotification(
+        isHe
+          ? "לא ניתן לשמור זמינות חלקית. יש לבחור ימים וגם שעת התחלה וסיום לכל חלון."
+          : "Cannot save partial availability. Each slot must include day(s), start time, and end time.",
+        "error"
+      );
+      return;
+    }
+
     const validAvailabilityTeacherSlots = availabilityAsTeacher.filter(a => 
       Array.isArray(a.days) && a.days.length > 0 && a.startTime && a.endTime
     );
@@ -285,15 +430,15 @@ export default function PersonalAreaPage() {
 
     // Prepare data for save
     const profileData = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      phone: phone.trim(),
-      photoUrl,
+      firstName: cleanFirstName,
+      lastName: cleanLastName,
+      phone: cleanPhone,
+      photoUrl: cleanPhotoUrl || null,
       coursesAsTeacher: validCoursesTeacher,
       coursesAsStudent: validCoursesStudent,
       availabilityAsTeacher: validAvailabilityTeacher,
-      aboutMeAsTeacher,
-      aboutMeAsStudent
+      aboutMeAsTeacher: aboutMeAsTeacher.trim(),
+      aboutMeAsStudent: aboutMeAsStudent.trim()
     };
 
     // Save via context
@@ -401,8 +546,15 @@ export default function PersonalAreaPage() {
               fontWeight: 700
             }}
           >
-            {photoUrl ? (
-              <img src={photoUrl} alt={isHe ? "תמונת פרופיל" : "Profile"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {photoUrl && !photoLoadFailed ? (
+              <img
+                src={photoUrl}
+                alt={isHe ? "תמונת פרופיל" : "Profile"}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                referrerPolicy="no-referrer"
+                loading="lazy"
+                onError={() => setPhotoLoadFailed(true)}
+              />
             ) : (
               isHe ? "ללא תמונה" : "No photo"
             )}
@@ -423,7 +575,14 @@ export default function PersonalAreaPage() {
 
         <Input label={isHe ? "שם פרטי" : "First Name"} value={firstName} onChange={(v) => { setFirstName(v); setHasChanges(true); }} placeholder={isHe ? "הכנס/י שם פרטי" : "Enter your first name"} />
         <Input label={isHe ? "שם משפחה" : "Last Name"} value={lastName} onChange={(v) => { setLastName(v); setHasChanges(true); }} placeholder={isHe ? "הכנס/י שם משפחה" : "Enter your last name"} />
-        <Input label={isHe ? "טלפון" : "Phone Number"} value={phone} onChange={(v) => { setPhone(v); setHasChanges(true); }} placeholder={isHe ? "למשל: +972 50 123 4567" : "e.g., +1 555 123 4567"} />
+        <Input
+          label={isHe ? "טלפון" : "Phone Number"}
+          value={phone}
+          onChange={(v) => { setPhone(v); setHasChanges(true); }}
+          placeholder={isHe ? "למשל: +972 50 123 4567" : "e.g., +1 555 123 4567"}
+          dir="ltr"
+          inputMode="tel"
+        />
       </section>
 
       <section style={cardStyle}>
@@ -442,7 +601,17 @@ export default function PersonalAreaPage() {
               label={isHe ? `קורס ${index + 1}` : `Course ${index + 1}`}
               value={course.course}
               onChange={(selected) => updateCourseAsTeacher(course.id, selected)}
-              options={availableCourses}
+              options={availableCourses.filter((option) => {
+                const courseId = normalizeCourse(option)?.id;
+                if (!Number.isInteger(courseId)) {
+                  return true;
+                }
+                const currentId = normalizeCourse(course.course)?.id;
+                if (currentId === courseId) {
+                  return true;
+                }
+                return !coursesAsTeacher.some((row) => normalizeCourse(row.course)?.id === courseId);
+              })}
               language={language}
               placeholder={isHe ? "חיפוש לפי מספר קורס או שם" : "Search by course number or name"}
               disabled={!generalComplete}
@@ -674,7 +843,17 @@ export default function PersonalAreaPage() {
               label={isHe ? `קורס ${index + 1}` : `Course ${index + 1}`}
               value={course.course}
               onChange={(selected) => updateCourseAsStudent(course.id, selected)}
-              options={availableCourses}
+              options={availableCourses.filter((option) => {
+                const courseId = normalizeCourse(option)?.id;
+                if (!Number.isInteger(courseId)) {
+                  return true;
+                }
+                const currentId = normalizeCourse(course.course)?.id;
+                if (currentId === courseId) {
+                  return true;
+                }
+                return !coursesAsStudent.some((row) => normalizeCourse(row.course)?.id === courseId);
+              })}
               language={language}
               placeholder={isHe ? "חיפוש לפי מספר קורס או שם" : "Search by course number or name"}
               disabled={!generalComplete}

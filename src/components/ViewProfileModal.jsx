@@ -1,16 +1,13 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Button from "./Button";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayName, normalizeCourse } from "../lib/courseUtils";
-
-const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+import { localizeDayName, sortAvailabilitySlotsByDayAndTime } from "../lib/dayUtils";
 
 export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
   const { language } = useI18n();
   const isHe = language === "he";
-  const dayMap = { Sunday: 'ראשון', Monday: 'שני', Tuesday: 'שלישי', Wednesday: 'רביעי', Thursday: 'חמישי', Friday: 'שישי', Saturday: 'שבת' };
-  const localizeDay = (day) => (isHe ? (dayMap[day] || day) : day);
-  const availability = tutor?.availabilityAsTeacher || tutor?.availability || [];
+  const availability = sortAvailabilitySlotsByDayAndTime(tutor?.availabilityAsTeacher || tutor?.availability || []);
 
   const rawCourses = tutor?.coursesAsTeacher || tutor?.courses || [];
 
@@ -29,6 +26,11 @@ export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
     .filter(Boolean);
 
   const aboutMe = tutor?.aboutMeAsTeacher || tutor?.about || "";
+  const [photoFailed, setPhotoFailed] = useState(false);
+
+  useEffect(() => {
+    setPhotoFailed(false);
+  }, [tutor?.photoUrl]);
 
   return (
     <div style={styles.overlay} onClick={onClose}>
@@ -42,11 +44,14 @@ export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
           {/* Profile Header with Photo */}
           <div style={styles.profileHeader}>
             <div style={styles.photoContainer}>
-              {tutor.photoUrl ? (
+              {tutor.photoUrl && !photoFailed ? (
                 <img 
                   src={tutor.photoUrl} 
                   alt={tutor.name} 
                   style={styles.photo}
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                  onError={() => setPhotoFailed(true)}
                 />
               ) : (
                 <div style={styles.photoPlaceholder}>
@@ -94,7 +99,7 @@ export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
               {availability.length > 0 ? (
                 availability.map(slot => (
                   <div key={slot.id} style={styles.availabilitySlot}>
-                    <div style={{ fontWeight: 600 }}>{localizeDay(slot.day)}</div>
+                    <div style={{ fontWeight: 600 }}>{localizeDayName(slot.day, isHe)}</div>
                     <div style={{ fontSize: 14, color: "#64748b" }}>
                       {slot.startTime} - {slot.endTime}
                     </div>

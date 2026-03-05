@@ -5,6 +5,8 @@ import Card from "../components/Card";
 import Input from "../components/Input";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useI18n } from "../i18n/useI18n";
+import { getCourseDisplayName } from "../lib/courseUtils";
+import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl } from "../lib/validation";
 
 export default function AdminPage() {
   const { language } = useI18n();
@@ -79,6 +81,30 @@ export default function AdminPage() {
     });
   }, [searchQuery, users]);
 
+  const fullNameOf = (targetUser) => `${targetUser.firstName || ""} ${targetUser.lastName || ""}`.trim();
+
+  const renderCourseList = (courses) => {
+    if (!Array.isArray(courses) || courses.length === 0) {
+      return <span style={styles.coursesEmpty}>{isHe ? "לא הוגדר" : "Not set"}</span>;
+    }
+
+    return (
+      <div style={styles.courseBadges}>
+        {courses.map((course, index) => {
+          const label =
+            getCourseDisplayName(course, language)
+            || course?.courseNumber
+            || (Number.isInteger(course?.id) ? `#${course.id}` : (isHe ? "קורס" : "Course"));
+          return (
+            <span key={`${course?.id ?? "course"}-${index}`} style={styles.courseBadge} title={label}>
+              {label}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   const openEditDialog = (targetUser) => {
     setEditingUser({
       id: targetUser.id,
@@ -115,8 +141,8 @@ export default function AdminPage() {
   const handleAdjustTokens = async (targetUserId) => {
     const rawValue = tokenAdjustments[targetUserId];
     const amount = Number(rawValue);
-    if (!Number.isFinite(amount) || amount === 0) {
-      addNotification(isHe ? "יש להזין מספר שונה מ-0." : "Please enter a non-zero number.", "error");
+    if (!Number.isFinite(amount)) {
+      addNotification(isHe ? "יש להזין מספר תקין." : "Please enter a valid number.", "error");
       return;
     }
 
@@ -142,7 +168,15 @@ export default function AdminPage() {
   const handleSaveUser = async () => {
     if (!editingUser) return;
 
-    if (!editingUser.email.trim() || !editingUser.firstName.trim() || !editingUser.lastName.trim()) {
+    const cleanEmail = editingUser.email.trim();
+    const cleanFirstName = editingUser.firstName.trim();
+    const cleanLastName = editingUser.lastName.trim();
+    const cleanPhone = String(editingUser.phone || "").trim();
+    const cleanPhotoUrl = String(editingUser.photoUrl || "").trim();
+    const cleanAboutTeacher = String(editingUser.aboutMeAsTeacher || "").trim();
+    const cleanAboutStudent = String(editingUser.aboutMeAsStudent || "").trim();
+
+    if (!cleanEmail || !cleanFirstName || !cleanLastName) {
       addNotification(
         isHe ? "אימייל, שם פרטי ושם משפחה הם שדות חובה." : "Email, first name and last name are required.",
         "error"
@@ -150,14 +184,50 @@ export default function AdminPage() {
       return;
     }
 
+    if (!isValidName(cleanFirstName) || !isValidName(cleanLastName)) {
+      addNotification(
+        isHe
+          ? "שם פרטי ושם משפחה יכולים להכיל אותיות, רווחים, מקף וגרש בלבד."
+          : "First and last name can contain letters, spaces, apostrophes and hyphens only.",
+        "error"
+      );
+      return;
+    }
+
+    if (cleanPhone && !isValidPhone(cleanPhone)) {
+      addNotification(
+        isHe
+          ? "מספר טלפון לא תקין. אפשר להשתמש בספרות, רווחים, סוגריים, מקף ו-+."
+          : "Invalid phone number. Use digits with optional spaces, parentheses, hyphens and +.",
+        "error"
+      );
+      return;
+    }
+
+    if (cleanPhotoUrl && !isValidPhotoUrl(cleanPhotoUrl)) {
+      addNotification(
+        isHe ? "קישור התמונה אינו תקין." : "Photo URL is invalid.",
+        "error"
+      );
+      return;
+    }
+
+    if (!isSafeFreeText(cleanAboutTeacher, 2000) || !isSafeFreeText(cleanAboutStudent, 2000)) {
+      addNotification(
+        isHe ? "שדות ה\"עליי\" כוללים קלט לא תקין." : "About fields contain invalid input.",
+        "error"
+      );
+      return;
+    }
+
     const result = await updateAdminUser(editingUser.id, {
-      email: editingUser.email.trim(),
-      firstName: editingUser.firstName.trim(),
-      lastName: editingUser.lastName.trim(),
-      phone: nullIfBlank(editingUser.phone),
-      photoUrl: nullIfBlank(editingUser.photoUrl),
-      aboutMeAsTeacher: nullIfBlank(editingUser.aboutMeAsTeacher),
-      aboutMeAsStudent: nullIfBlank(editingUser.aboutMeAsStudent),
+      email: cleanEmail,
+      firstName: cleanFirstName,
+      lastName: cleanLastName,
+      phone: nullIfBlank(cleanPhone),
+      photoUrl: nullIfBlank(cleanPhotoUrl),
+      aboutMeAsTeacher: nullIfBlank(cleanAboutTeacher),
+      aboutMeAsStudent: nullIfBlank(cleanAboutStudent),
       isAdmin: Boolean(editingUser.isAdmin),
       isBlockedTutor: Boolean(editingUser.blockedTutor),
       isActive: Boolean(editingUser.isActive)
@@ -260,20 +330,26 @@ export default function AdminPage() {
             <div style={styles.tableShell}>
               <table style={styles.table}>
                 <colgroup>
-                  <col style={{ width: "15%" }} />
-                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "8%" }} />
                   <col style={{ width: "12%" }} />
-                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "5%" }} />
+                  <col style={{ width: "7%" }} />
                   <col style={{ width: "10%" }} />
-                  <col style={{ width: "9%" }} />
-                  <col style={{ width: "9%" }} />
-                  <col style={{ width: "12%" }} />
                 </colgroup>
                 <thead>
                   <tr>
+                    <th style={styles.th}>{isHe ? "תמונה" : "Photo"}</th>
                     <th style={styles.th}>{isHe ? "שם" : "Name"}</th>
                     <th style={styles.th}>{isHe ? "אימייל" : "Email"}</th>
                     <th style={styles.th}>{isHe ? "טלפון" : "Phone"}</th>
+                    <th style={styles.th}>{isHe ? "קורסים כמורה" : "Tutor courses"}</th>
+                    <th style={styles.th}>{isHe ? "מחפש/ת מורה ל" : "Looking for tutor in"}</th>
                     <th style={styles.th}>{isHe ? "סוג" : "Type"}</th>
                     <th style={styles.th}>{isHe ? "טוקנים" : "Tokens"}</th>
                     <th style={styles.th}>{isHe ? "דירוג" : "Rating"}</th>
@@ -284,11 +360,17 @@ export default function AdminPage() {
                 <tbody>
                   {filteredUsers.map((u) => {
                     const roleLabel = isHe ? "תלמיד/ה + מורה" : "Student + Tutor";
+                    const fullName = fullNameOf(u);
                     return (
                       <tr key={u.id}>
+                        <td style={styles.td}>
+                          <div style={styles.photoCell}>
+                            <UserAvatar photoUrl={u.photoUrl} fullName={fullName} isHe={isHe} />
+                          </div>
+                        </td>
                         <td style={styles.tdStrong}>
                           <div style={styles.nameCell}>
-                            <span>{u.firstName} {u.lastName}</span>
+                            <span>{fullName || (isHe ? "ללא שם" : "No name")}</span>
                             <span style={styles.userIdHint}>#{u.id}</span>
                           </div>
                         </td>
@@ -297,6 +379,12 @@ export default function AdminPage() {
                         </td>
                         <td style={styles.td}>
                           <span dir="ltr">{u.phone || "-"}</span>
+                        </td>
+                        <td style={{ ...styles.td, ...styles.coursesCell }}>
+                          {renderCourseList(u.coursesAsTeacher)}
+                        </td>
+                        <td style={{ ...styles.td, ...styles.coursesCell }}>
+                          {renderCourseList(u.coursesAsStudent)}
                         </td>
                         <td style={styles.td}>
                           <div style={styles.badgesWrap}>
@@ -497,6 +585,40 @@ export default function AdminPage() {
   );
 }
 
+const initialsFromName = (fullName) => {
+  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+};
+
+function UserAvatar({ photoUrl, fullName, isHe }) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [photoUrl]);
+
+  const alt = fullName || (isHe ? "תמונת פרופיל" : "Profile photo");
+  const showImage = Boolean(photoUrl) && !failed;
+
+  return (
+    <div style={styles.avatarFrame}>
+      {showImage ? (
+        <img
+          src={photoUrl}
+          alt={alt}
+          style={styles.avatarThumb}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div style={styles.avatarFallback}>{initialsFromName(fullName)}</div>
+      )}
+    </div>
+  );
+}
+
 const styles = {
   tabs: { display: "flex", gap: 8, marginBottom: 16 },
   tab: { padding: "10px 16px", borderRadius: 8, border: "1px solid #e2e8f0", cursor: "pointer", background: "white" },
@@ -541,7 +663,7 @@ const styles = {
     overflowX: 'auto',
     background: '#fff'
   },
-  table: { width: "100%", minWidth: 1300, borderCollapse: "collapse", tableLayout: "fixed" },
+  table: { width: "100%", minWidth: 1800, borderCollapse: "collapse", tableLayout: "fixed" },
   th: {
     textAlign: "start",
     padding: "12px 10px",
@@ -563,6 +685,42 @@ const styles = {
   nameCell: { display: 'grid', gap: 3 },
   userIdHint: { fontSize: 12, color: '#64748b', fontWeight: 500 },
   emailCell: { display: 'inline-block', maxWidth: '100%', overflowWrap: 'anywhere' },
+  photoCell: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  avatarFrame: {
+    width: 52,
+    height: 52,
+    borderRadius: '50%',
+    overflow: 'hidden',
+    border: '1px solid #cbd5e1',
+    background: '#f8fafc'
+  },
+  avatarThumb: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#e2e8f0',
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: 800
+  },
+  coursesCell: { minWidth: 0 },
+  courseBadges: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  courseBadge: {
+    padding: '4px 8px',
+    borderRadius: 999,
+    background: '#f1f5f9',
+    border: '1px solid #dbeafe',
+    color: '#0f172a',
+    fontSize: 12,
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  coursesEmpty: { fontSize: 12, color: '#94a3b8', fontStyle: 'italic' },
   roleTutor: {
     padding: '4px 10px',
     borderRadius: 999,

@@ -10,6 +10,9 @@ import googleIcon from '../assets/googleLogo.png';
 import { useI18n } from '../i18n/useI18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { getGoogleIdToken } from '../lib/googleIdentity';
+import { resolvePostAuthPath } from '../lib/authNavigation';
+import { translateErrorMessage } from '../lib/errorMessages';
+import { isSafeFreeText, isValidName } from '../lib/validation';
 
 export default function CreateUserPage() {
   const [firstName, setFirstName] = useState('');
@@ -21,7 +24,7 @@ export default function CreateUserPage() {
   const [secretAnswer, setSecretAnswer] = useState('');
   const navigate = useNavigate();
   const { addNotification, register, googleLogin } = useApp();
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language } = useI18n();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -41,6 +44,22 @@ export default function CreateUserPage() {
       return;
     }
 
+    if (!isValidName(cleanFirstName) || !isValidName(cleanLastName)) {
+      addNotification(
+        isRTL ? "שם פרטי ושם משפחה יכולים להכיל אותיות, רווחים, מקף וגרש בלבד." : "First and last name can contain letters, spaces, apostrophes and hyphens only.",
+        'error'
+      );
+      return;
+    }
+
+    if (!isSafeFreeText(cleanSecretQuestion, 200) || !isSafeFreeText(cleanSecretAnswer, 200)) {
+      addNotification(
+        isRTL ? "שאלת/תשובת האבטחה כוללות קלט לא תקין." : "Secret question/answer contain invalid input.",
+        'error'
+      );
+      return;
+    }
+
     const response = await register({
       firstName: cleanFirstName,
       lastName: cleanLastName,
@@ -55,7 +74,7 @@ export default function CreateUserPage() {
     }
 
     addNotification(t('auth.userCreated'), 'success');
-    navigate('/me', { replace: true });
+    navigate(resolvePostAuthPath(response, '/home'), { replace: true });
   }
 
 
@@ -74,9 +93,9 @@ export default function CreateUserPage() {
       }
 
       addNotification(t('auth.googleLoginSuccess'), 'success');
-      navigate('/me', { replace: true });
+      navigate(resolvePostAuthPath(response, '/home'), { replace: true });
     } catch (error) {
-      addNotification(error.message || t('auth.googleLoginFailed'), 'error');
+      addNotification(translateErrorMessage(error, language) || t('auth.googleLoginFailed'), 'error');
     }
   }
 

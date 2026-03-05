@@ -10,6 +10,8 @@ import googleIcon from '../assets/googleLogo.png';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useI18n } from '../i18n/useI18n';
 import { getGoogleIdToken } from '../lib/googleIdentity';
+import { resolvePostAuthPath } from '../lib/authNavigation';
+import { translateErrorMessage } from '../lib/errorMessages';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +19,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addNotification, login, googleLogin } = useApp();
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language } = useI18n();
   const redirectPath = location.state?.from?.pathname || '/home';
 
   async function handleSubmit(e) {
@@ -26,7 +28,7 @@ export default function LoginPage() {
     if (!response.success) {
       return;
     }
-    navigate(redirectPath, { replace: true });
+    navigate(resolvePostAuthPath(response, redirectPath), { replace: true });
   }
 
   async function handleGoogleLogin() {
@@ -43,9 +45,9 @@ export default function LoginPage() {
         return;
       }
       addNotification(t('auth.googleLoginSuccess'), 'success');
-      navigate(redirectPath, { replace: true });
+      navigate(resolvePostAuthPath(response, redirectPath), { replace: true });
     } catch (error) {
-      addNotification(error.message || t('auth.googleLoginFailed'), 'error');
+      addNotification(translateErrorMessage(error, language) || t('auth.googleLoginFailed'), 'error');
     }
   }
 

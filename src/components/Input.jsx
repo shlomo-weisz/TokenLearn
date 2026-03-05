@@ -1,4 +1,16 @@
-export default function Input({ label, type = 'text', value, onChange, placeholder, disabled = false, icon = null, error = null }) {
+export default function Input({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  disabled = false,
+  icon = null,
+  error = null,
+  dir = 'auto',
+  inputMode,
+  ...rest
+}) {
   const inputStyle = {
     width: '100%',
     padding: icon ? '12px 16px 12px 42px' : '12px 16px',
@@ -59,7 +71,10 @@ export default function Input({ label, type = 'text', value, onChange, placehold
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          dir={dir}
+          inputMode={inputMode}
           style={inputStyle}
+          {...rest}
           onFocus={(e) => {
             if (!disabled) {
               Object.assign(e.target.style, focusStyle);

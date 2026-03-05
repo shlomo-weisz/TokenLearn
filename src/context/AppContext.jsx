@@ -6,6 +6,7 @@ import {
   normalizeAuthPayload,
   setStoredAuthToken
 } from '../lib/apiClient';
+import { getCurrentUiLanguage, getSessionExpiredMessage, translateErrorMessage } from '../lib/errorMessages';
 
 const DEFAULT_USER = {
   id: null,
@@ -94,6 +95,54 @@ const mergeUserState = (setUser, userPatch = {}) => {
   }));
 };
 
+const formatNotificationDate = (value, language) => {
+  if (!value) {
+    return '';
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+  return parsed.toLocaleString(language === 'he' ? 'he-IL' : 'en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
+
+const buildRealtimeNotification = (notification, language) => {
+  const isHe = language === 'he';
+  const eventType = String(notification?.eventType || '').toUpperCase();
+  const courseName = String(notification?.courseName || '').trim();
+  const counterpartName = notification?.counterpartName || (isHe ? 'המורה' : 'your tutor');
+  const scheduledAt = formatNotificationDate(notification?.scheduledAt, language);
+  const rejectionReason = String(notification?.rejectionReason || '').trim();
+  const courseFragment = courseName
+    ? (isHe ? ` עבור ${courseName}` : ` for ${courseName}`)
+    : '';
+
+  if (eventType === 'LESSON_REQUEST_APPROVED') {
+    const message = isHe
+      ? `${counterpartName} אישר/ה את בקשת השיעור שלך${courseFragment}${scheduledAt ? ` ל-${scheduledAt}` : ''}.`
+      : `${counterpartName} approved your lesson request${courseFragment}${scheduledAt ? ` scheduled for ${scheduledAt}` : ''}.`;
+    return { type: 'success', message };
+  }
+
+  if (eventType === 'LESSON_REQUEST_REJECTED') {
+    const message = isHe
+      ? `${counterpartName} דחה/תה את בקשת השיעור שלך${courseFragment}${rejectionReason ? `. סיבה: ${rejectionReason}` : '.'}`
+      : `${counterpartName} rejected your lesson request${courseFragment}${rejectionReason ? `. Reason: ${rejectionReason}` : '.'}`;
+    return { type: 'warning', message };
+  }
+
+  return {
+    type: 'info',
+    message: isHe ? 'יש לך התראה חדשה.' : 'You have a new notification.'
+  };
+};
+
 export function AppProvider({ children }) {
   const [user, setUser] = useState(DEFAULT_USER);
   const [notifications, setNotifications] = useState([]);
@@ -101,6 +150,7 @@ export function AppProvider({ children }) {
   const [authToken, setAuthToken] = useState(() => getStoredAuthToken());
   const [isAuthReady, setIsAuthReady] = useState(false);
   const unauthorizedNotifiedRef = useRef(false);
+  const announcedNotificationIdsRef = useRef(new Set());
 
   const isAuthenticated = Boolean(authToken);
   const loading = pendingRequests > 0;
@@ -154,12 +204,15 @@ export function AppProvider({ children }) {
     await syncCurrentUserProfile();
   };
 
-  const apiCall = async (fn, { notifyOnError = true, logoutOnUnauthorized = true } = {}) => {
-    setPendingRequests((count) => count + 1);
+  const apiCall = async (fn, { notifyOnError = true, logoutOnUnauthorized = true, trackPending = true } = {}) => {
+    if (trackPending) {
+      setPendingRequests((count) => count + 1);
+    }
     try {
       const result = await fn();
       return { success: true, data: result };
     } catch (error) {
+      const language = getCurrentUiLanguage();
       const isUnauthorized = error?.status === 401 || error?.code === 'UNAUTHORIZED';
 
       if (isUnauthorized && logoutOnUnauthorized) {
@@ -170,15 +223,17 @@ export function AppProvider({ children }) {
         if (isUnauthorized && logoutOnUnauthorized) {
           if (!unauthorizedNotifiedRef.current) {
             unauthorizedNotifiedRef.current = true;
-            addNotification('Session expired. Please sign in again.', 'error');
+            addNotification(getSessionExpiredMessage(language), 'error');
           }
         } else {
-          addNotification(error.message || 'An error occurred', 'error');
+          addNotification(translateErrorMessage(error, language), 'error');
         }
       }
       return { success: false, error };
     } finally {
-      setPendingRequests((count) => Math.max(0, count - 1));
+      if (trackPending) {
+        setPendingRequests((count) => Math.max(0, count - 1));
+      }
     }
   };
 
@@ -551,6 +606,22 @@ export function AppProvider({ children }) {
     });
   };
 
+  const getUnreadNotifications = async (limit = 10) => {
+    return apiCall(async () => {
+      const payload = await apiRequest(`/api/notifications/unread${toQueryString({ limit })}`);
+      return firstArray(payload, ['notifications', 'items']);
+    }, { notifyOnError: false, trackPending: false });
+  };
+
+  const markNotificationsRead = async (ids = []) => {
+    return apiCall(async () => {
+      return apiRequest('/api/notifications/read', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      });
+    }, { notifyOnError: false, trackPending: false });
+  };
+
   const getAdminDashboard = async () => {
     return apiCall(async () => {
       return apiRequest('/api/admin/dashboard');
@@ -648,6 +719,51 @@ export function AppProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isAuthReady || !isAuthenticated) {
+      announcedNotificationIdsRef.current.clear();
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const pollUnreadNotifications = async () => {
+      const result = await getUnreadNotifications(10);
+      if (!result.success || cancelled) {
+        return;
+      }
+
+      const unread = (result.data || []).filter((notification) => {
+        const id = notification?.id;
+        return id != null && !announcedNotificationIdsRef.current.has(id);
+      });
+
+      if (unread.length === 0) {
+        return;
+      }
+
+      const language = getCurrentUiLanguage();
+      unread
+        .slice()
+        .reverse()
+        .forEach((notification) => {
+          announcedNotificationIdsRef.current.add(notification.id);
+          const toast = buildRealtimeNotification(notification, language);
+          addNotification(toast.message, toast.type);
+        });
+
+      await markNotificationsRead(unread.map((notification) => notification.id));
+    };
+
+    pollUnreadNotifications();
+    const intervalId = window.setInterval(pollUnreadNotifications, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthReady, isAuthenticated]);
+
   const tokenSummary = useMemo(() => {
     const balances = user.tokenBalances || DEFAULT_USER.tokenBalances;
     return {
@@ -699,6 +815,8 @@ export function AppProvider({ children }) {
     cancelLesson,
     getLessonRequestsAsStudent,
     getLessonRequestsAsTeacher,
+    getUnreadNotifications,
+    markNotificationsRead,
     createLessonRequest,
     approveLessonRequest,
     rejectLessonRequest,

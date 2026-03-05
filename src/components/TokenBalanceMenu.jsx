@@ -34,16 +34,7 @@ export default function TokenBalanceMenu({ tokenSummary }) {
         aria-expanded={isOpen}
       >
         <span style={styles.triggerContent}>
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            role="img"
-            aria-label={t('headerTopBar.tokenBalance')}
-          >
-            <circle cx="12" cy="12" r="9" fill="#facc15" stroke="#ca8a04" strokeWidth="1.8" />
-            <circle cx="12" cy="12" r="5" fill="#fde68a" stroke="#ca8a04" strokeWidth="1.2" />
-          </svg>
+          <span style={styles.tokenSymbol} aria-hidden="true">TOK</span>
           <span>{t('headerTopBar.tokenBalance')}</span>
         </span>
       </button>
@@ -91,6 +82,21 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6
+  },
+  tokenSymbol: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 28,
+    height: 20,
+    padding: '0 6px',
+    borderRadius: 999,
+    border: '1px solid #ca8a04',
+    background: '#fef08a',
+    color: '#713f12',
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: 0.4
   },
   dropdown: {
     position: 'absolute',

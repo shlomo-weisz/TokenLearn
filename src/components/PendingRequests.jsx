@@ -2,19 +2,22 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/useApp";
 import { useI18n } from "../i18n/useI18n";
+import { isValidDate, parseFlexibleDate, resolveLessonDateFromRequest } from "../lib/dateTimeUtils";
+import { localizeDayName } from "../lib/dayUtils";
 
 export default function PendingRequests({ requests, onApprove, onReject }) {
   const navigate = useNavigate();
   const { addNotification } = useApp();
   const { language } = useI18n();
   const isHe = language === 'he';
-  const dayMap = { Sunday: 'ראשון', Monday: 'שני', Tuesday: 'שלישי', Wednesday: 'רביעי', Thursday: 'חמישי', Friday: 'שישי', Saturday: 'שבת' };
-  const localizeDay = (day) => (isHe ? (dayMap[day] || day) : day);
   const [timers, setTimers] = useState({});
 
-  const calculateTimeRemaining = useCallback((lessonDateTime) => {
+  const calculateTimeRemaining = useCallback((request) => {
+    const lessonDate = resolveLessonDateFromRequest(request);
+    if (!isValidDate(lessonDate)) {
+      return null;
+    }
     const now = new Date();
-    const lessonDate = new Date(lessonDateTime);
     const deadline = new Date(lessonDate.getTime() - 6 * 60 * 60 * 1000);
     const diff = deadline.getTime() - now.getTime();
 
@@ -28,8 +31,11 @@ export default function PendingRequests({ requests, onApprove, onReject }) {
     return { expired: false, text: isHe ? `${hours}ש׳ ${minutes}ד׳` : `${hours}h ${minutes}m`, hours, minutes };
   }, [isHe]);
 
-  const formatLessonDate = (lessonDateTime) => {
-    const date = new Date(lessonDateTime);
+  const formatLessonDate = (request) => {
+    const date = resolveLessonDateFromRequest(request);
+    if (!isValidDate(date)) {
+      return isHe ? "לא נקבע תאריך תקין" : "Valid date not provided";
+    }
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -48,8 +54,11 @@ export default function PendingRequests({ requests, onApprove, onReject }) {
     const updateTimers = () => {
       const newTimers = {};
       requests.forEach((r) => {
-        if ((r.status === "Pending" || r.status === "pending") && r.lessonDateTime) {
-          newTimers[r.id] = calculateTimeRemaining(r.lessonDateTime);
+        if (r.status === "Pending" || r.status === "pending") {
+          const timer = calculateTimeRemaining(r);
+          if (timer) {
+            newTimers[r.id] = timer;
+          }
         }
       });
       setTimers(newTimers);
@@ -98,9 +107,10 @@ export default function PendingRequests({ requests, onApprove, onReject }) {
           {activeRequests.map((r) => {
             const isPending = r.status === "Pending" || r.status === "pending";
             const timer = timers[r.id];
-            const lessonDate = r.lessonDateTime ? formatLessonDate(r.lessonDateTime) : r.time;
-            const requestDate = r.requestedAt
-              ? new Date(r.requestedAt).toLocaleString(isHe ? 'he-IL' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            const lessonDate = formatLessonDate(r);
+            const requestedAtDate = parseFlexibleDate(r.requestedAt);
+            const requestDate = isValidDate(requestedAtDate)
+              ? requestedAtDate.toLocaleString(isHe ? 'he-IL' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
               : (isHe ? 'לא זמין' : 'N/A');
 
             return (
@@ -112,7 +122,7 @@ export default function PendingRequests({ requests, onApprove, onReject }) {
                     <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{isHe ? 'נשלח' : 'Requested'}: {requestDate}</div>
                     {r.requestedSlot && (
                       <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                        {localizeDay(r.requestedSlot.day)} {r.requestedSlot.specificStartTime} - {r.requestedSlot.specificEndTime}
+                        {localizeDayName(r.requestedSlot.day, isHe)} • {r.requestedSlot.startTime} - {r.requestedSlot.endTime}
                       </div>
                     )}
                   </div>

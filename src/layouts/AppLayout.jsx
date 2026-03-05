@@ -4,6 +4,17 @@ import TokenBalanceMenu from '../components/TokenBalanceMenu';
 import { useI18n } from '../i18n/useI18n';
 import { useApp } from '../context/useApp';
 
+function TokenHistoryIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" style={styles.navIcon}>
+      <ellipse cx="12" cy="6" rx="6.5" ry="2.5" fill="#fbbf24" stroke="#92400e" strokeWidth="1.2" />
+      <path d="M5.5 6v4c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5V6" fill="#f59e0b" stroke="#92400e" strokeWidth="1.2" />
+      <path d="M5.5 10v4c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-4" fill="#fbbf24" stroke="#92400e" strokeWidth="1.2" />
+      <path d="M5.5 14v4c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-4" fill="#fde68a" stroke="#92400e" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -55,7 +66,7 @@ export default function AppLayout() {
               ⭐ {t('nav.rating')}
             </Link>
             <Link to="/token-history" style={getNavLinkStyle('/token-history')}>
-              🪙 {t('nav.tokenHistory')}
+              <TokenHistoryIcon /> {t('nav.tokenHistory')}
             </Link>
             <Link to="/lesson-history" style={getNavLinkStyle('/lesson-history')}>
               📚 {t('nav.lessonHistory')}
@@ -135,6 +146,12 @@ const styles = {
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer'
+  },
+  navIcon: {
+    width: 18,
+    height: 18,
+    verticalAlign: 'text-bottom',
+    flexShrink: 0
   },
   main: {
     padding: '0 24px 32px',

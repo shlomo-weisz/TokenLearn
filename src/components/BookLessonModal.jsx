@@ -4,22 +4,41 @@ import Button from "./Button";
 import { useI18n } from "../i18n/useI18n";
 import CourseAutocomplete from "./CourseAutocomplete";
 import { dedupeCoursesById, getCourseDisplayName, normalizeCourse } from "../lib/courseUtils";
+import {
+  getNextDateForWeekday,
+  getWeekdayEnglishFromDateInput,
+  localizeDayName,
+  normalizeDayToEnglish,
+  sortAvailabilitySlotsByDayAndTime,
+  toDateInputValue
+} from "../lib/dayUtils";
 
-const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const LESSON_DURATION_MINUTES = 60;
+const START_TIME_STEP_MINUTES = 15;
+
+const timeToMinutes = (timeStr) => {
+  const [hours, minutes] = String(timeStr || "").split(":").map(Number);
+  return (hours * 60) + minutes;
+};
+
+const minutesToTimeString = (totalMinutes) => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
 
 export default function BookLessonModal({ tutor, onClose, onBook }) {
   const { language } = useI18n();
   const isHe = language === "he";
-  const dayMap = { Sunday: 'ראשון', Monday: 'שני', Tuesday: 'שלישי', Wednesday: 'רביעי', Thursday: 'חמישי', Friday: 'שישי', Saturday: 'שבת' };
-  const localizeDay = (day) => (isHe ? (dayMap[day] || day) : day);
   const { createLessonRequest, addNotification, tokenSummary } = useApp();
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedDate, setSelectedDate] = useState("");
   const [specificStartTime, setSpecificStartTime] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availability = tutor?.availabilityAsTeacher || tutor?.availability || [];
+  const availability = sortAvailabilitySlotsByDayAndTime(tutor?.availabilityAsTeacher || tutor?.availability || []);
 
   const courseOptions = dedupeCoursesById(
     Array.isArray(tutor?.courseOptions)
@@ -30,6 +49,19 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
   );
 
   const selectedSlot = availability.find(slot => slot.id === selectedSlotId);
+  const selectedSlotDayEnglish = normalizeDayToEnglish(selectedSlot?.day);
+  const availableStartTimes = selectedSlot
+    ? (() => {
+        const slotStartMinutes = timeToMinutes(selectedSlot.startTime);
+        const slotEndMinutes = timeToMinutes(selectedSlot.endTime);
+        const latestStartMinutes = slotEndMinutes - LESSON_DURATION_MINUTES;
+        const options = [];
+        for (let current = slotStartMinutes; current <= latestStartMinutes; current += START_TIME_STEP_MINUTES) {
+          options.push(minutesToTimeString(current));
+        }
+        return options;
+      })()
+    : [];
 
   const handleBook = async () => {
     if (!selectedSlot) {
@@ -48,31 +80,39 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
       return;
     }
 
-    // Convert times to minutes for accurate comparison
-    const timeToMinutes = (timeStr) => {
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
+    if (!selectedDate) {
+      addNotification(isHe ? "נא לבחור תאריך לשיעור" : "Please select a lesson date", "error");
+      return;
+    }
+
+    if (!selectedSlotDayEnglish) {
+      addNotification(
+        isHe ? "יום הזמינות לא מזוהה. עדכן/י את זמינות המורה ונסה/י שוב." : "The availability day is not recognized. Please refresh tutor availability and try again.",
+        "error"
+      );
+      return;
+    }
+
+    const selectedDateDay = getWeekdayEnglishFromDateInput(selectedDate);
+    if (selectedDateDay && selectedDateDay !== selectedSlotDayEnglish) {
+      addNotification(
+        isHe
+          ? `התאריך שנבחר לא תואם ליום ${localizeDayName(selectedSlotDayEnglish, true)}.`
+          : `The selected date does not match ${selectedSlotDayEnglish}.`,
+        "error"
+      );
+      return;
+    }
 
     const startMinutes = timeToMinutes(specificStartTime);
     const slotStartMinutes = timeToMinutes(selectedSlot.startTime);
     const slotEndMinutes = timeToMinutes(selectedSlot.endTime);
 
     // Calculate end time (1 hour = 60 minutes after start time)
-    const endMinutes = startMinutes + 60;
+    const endMinutes = startMinutes + LESSON_DURATION_MINUTES;
     const endHours = Math.floor(endMinutes / 60);
     const endMins = endMinutes % 60;
     const specificEndTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-
-    console.log('Validation:', {
-      specificStartTime,
-      specificEndTime,
-      slotRange: `${selectedSlot.startTime} - ${selectedSlot.endTime}`,
-      startMinutes,
-      slotStartMinutes,
-      endMinutes,
-      slotEndMinutes
-    });
 
     // Validate start time is within available range
     if (startMinutes < slotStartMinutes) {
@@ -96,11 +136,11 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
       course: getCourseDisplayName(selectedCourseNormalized, language),
       tokenCost: 1,
       requestedSlot: {
-        day: selectedSlot.day,
+        day: selectedSlotDayEnglish,
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
-        specificStartTime,
-        specificEndTime
+        specificStartTime: `${selectedDate}T${specificStartTime}`,
+        specificEndTime: `${selectedDate}T${specificEndTime}`
       },
       message
     };
@@ -181,12 +221,13 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
                     checked={selectedSlotId === slot.id}
                     onChange={() => {
                       setSelectedSlotId(slot.id);
+                      setSelectedDate(toDateInputValue(getNextDateForWeekday(slot.day)));
                       setSpecificStartTime("");
                     }}
                     style={{ marginRight: 10 }}
                   />
                   <div>
-                    <div style={{ fontWeight: 600 }}>{localizeDay(slot.day)}</div>
+                    <div style={{ fontWeight: 600 }}>{localizeDayName(slot.day, isHe)}</div>
                     <div style={{ fontSize: 14, color: "#64748b" }}>
                       {isHe ? "זמין" : "Available"}: {slot.startTime} - {slot.endTime}
                     </div>
@@ -200,7 +241,7 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
           {selectedSlot && (
             <div style={styles.section}>
               <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>
-                {isHe ? "בחר/י שעת התחלה לשיעור" : "Choose Your Lesson Start Time"}
+                {isHe ? "בחירת תאריך ושעת התחלה" : "Select Date and Start Time"}
               </h3>
               <div style={{
                 padding: 16,
@@ -210,47 +251,64 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
                 marginBottom: 12
               }}>
                 <div style={{ fontSize: 14, color: "#0c4a6e", marginBottom: 8 }}>
-                  {isHe ? "ℹ️ כל השיעורים הם שעה. בחר/י שעת התחלה בטווח:" : "ℹ️ All lessons are 1 hour. Select a start time within the available range:"} {selectedSlot.startTime} - {(() => {
+                  {isHe ? "ℹ️ כל השיעורים הם שעה. אפשר לבחור שעת התחלה כל 15 דקות בטווח:" : "ℹ️ All lessons are 1 hour. You can pick a start time every 15 minutes within:"} {selectedSlot.startTime} - {(() => {
                     // Calculate latest possible start time (1 hour before end time)
                     const [endHours, endMinutes] = selectedSlot.endTime.split(':').map(Number);
                     const endTotalMinutes = endHours * 60 + endMinutes;
-                    const latestStartMinutes = endTotalMinutes - 60;
+                    const latestStartMinutes = endTotalMinutes - LESSON_DURATION_MINUTES;
                     const latestHours = Math.floor(latestStartMinutes / 60);
                     const latestMins = latestStartMinutes % 60;
                     return `${latestHours.toString().padStart(2, '0')}:${latestMins.toString().padStart(2, '0')}`;
                   })()}
                 </div>
+                <div style={{ fontSize: 14, color: "#0c4a6e" }}>
+                  {isHe ? "יום החלון שנבחר:" : "Selected slot day:"} <strong>{localizeDayName(selectedSlot.day, isHe)}</strong>
+                </div>
               </div>
-              <label style={{ display: "grid", gap: 6 }}>
+              <label style={{ display: "grid", gap: 6, marginBottom: 10 }}>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>
-                  Lesson Start Time *
+                  {isHe ? "תאריך שיעור *" : "Lesson Date *"}
                 </div>
                 <input
-                  type="time"
-                  value={specificStartTime}
-                  onChange={e => {
-                    const newTime = e.target.value;
-                    console.log('Selected time:', newTime, 'Slot range:', selectedSlot.startTime, '-', selectedSlot.endTime);
-                    setSpecificStartTime(newTime);
-                  }}
-                  min={selectedSlot.startTime}
-                  max={(() => {
-                    // Calculate max time: must allow 1 hour lesson to end by endTime
-                    const [endHours, endMinutes] = selectedSlot.endTime.split(':').map(Number);
-                    const endTotalMinutes = endHours * 60 + endMinutes;
-                    const maxStartMinutes = endTotalMinutes - 60; // 60 minutes before end
-                    const maxHours = Math.floor(maxStartMinutes / 60);
-                    const maxMins = maxStartMinutes % 60;
-                    const result = `${maxHours.toString().padStart(2, '0')}:${maxMins.toString().padStart(2, '0')}`;
-                    console.log('Max start time calculated:', result);
-                    return result;
-                  })()}
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  min={toDateInputValue(new Date())}
                   style={styles.timeInput}
                 />
+              </label>
+              {selectedDate && selectedSlotDayEnglish && getWeekdayEnglishFromDateInput(selectedDate) !== selectedSlotDayEnglish && (
+                <div style={{ color: "#b91c1c", fontSize: 13, fontWeight: 700 }}>
+                  {isHe
+                    ? `התאריך לא מתאים ליום ${localizeDayName(selectedSlotDayEnglish, true)}.`
+                    : `The selected date does not match ${selectedSlotDayEnglish}.`}
+                </div>
+              )}
+              <label style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  {isHe ? "שעת התחלה *" : "Lesson Start Time *"}
+                </div>
+                <select
+                  value={specificStartTime}
+                  onChange={e => setSpecificStartTime(e.target.value)}
+                  disabled={availableStartTimes.length === 0}
+                  style={styles.timeInput}
+                >
+                  <option value="">
+                    {availableStartTimes.length === 0
+                      ? (isHe ? "אין שעות זמינות בחלון הזה" : "No start times available in this slot")
+                      : (isHe ? "בחר/י שעת התחלה" : "Select a start time")}
+                  </option>
+                  {availableStartTimes.map((timeOption) => (
+                    <option key={timeOption} value={timeOption}>
+                      {timeOption}
+                    </option>
+                  ))}
+                </select>
                 {specificStartTime && (() => {
                   const [hours, minutes] = specificStartTime.split(':').map(Number);
                   const startMinutes = hours * 60 + minutes;
-                  const endMinutes = startMinutes + 60;
+                  const endMinutes = startMinutes + LESSON_DURATION_MINUTES;
                   const endHours = Math.floor(endMinutes / 60);
                   const endMins = endMinutes % 60;
                   const endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;

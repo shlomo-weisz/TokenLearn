@@ -4,6 +4,8 @@ import Button from "../components/Button";
 import ConfirmModal from "../components/ConfirmModal";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useI18n } from "../i18n/useI18n";
+import { isValidDate, parseFlexibleDate, resolveLessonDateFromRequest } from "../lib/dateTimeUtils";
+import { localizeDayName } from "../lib/dayUtils";
 
 export default function LessonRequestsPage() {
   const { language } = useI18n();
@@ -41,9 +43,12 @@ export default function LessonRequestsPage() {
   }, []);
 
   // Calculate time remaining until approval deadline (6 hours before lesson)
-  const calculateTimeRemaining = useCallback((lessonDateTime) => {
+  const calculateTimeRemaining = useCallback((request) => {
+    const lessonDate = resolveLessonDateFromRequest(request);
+    if (!isValidDate(lessonDate)) {
+      return null;
+    }
     const now = new Date();
-    const lessonDate = new Date(lessonDateTime);
     
     // Deadline: 6 hours before lesson
     const deadline = new Date(lessonDate.getTime() - 6 * 60 * 60 * 1000);
@@ -66,9 +71,9 @@ export default function LessonRequestsPage() {
   }, [isHe]);
 
   // Format lesson date for display
-  const formatLessonDate = (lessonDateTime) => {
-    if (!lessonDateTime) return isHe ? "לא זמין" : "N/A";
-    const date = new Date(lessonDateTime);
+  const formatLessonDate = (request) => {
+    const date = resolveLessonDateFromRequest(request);
+    if (!isValidDate(date)) return isHe ? "לא נקבע תאריך תקין" : "Valid date not provided";
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -76,16 +81,57 @@ export default function LessonRequestsPage() {
     const isToday = date.toDateString() === now.toDateString();
     const isTomorrow = date.toDateString() === tomorrow.toDateString();
     
-    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const timeStr = date.toLocaleTimeString(isHe ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     
     if (isToday) {
       return isHe ? `היום ${timeStr}` : `Today ${timeStr}`;
     } else if (isTomorrow) {
       return isHe ? `מחר ${timeStr}` : `Tomorrow ${timeStr}`;
     } else {
-      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const dateStr = date.toLocaleDateString(isHe ? 'he-IL' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       return `${dateStr} ${timeStr}`;
     }
+  };
+
+  const buildRequestedSlotSummary = (request) => {
+    const requestedAt = parseFlexibleDate(request?.requestedAt);
+    const slot = request?.requestedSlot || {};
+    const dayLabel = localizeDayName(slot.day, isHe);
+    const preferredWindow = slot.startTime && slot.endTime
+      ? `${slot.startTime} - ${slot.endTime}`
+      : (isHe ? "לא צוין" : "Not specified");
+
+    const specificStart = parseFlexibleDate(slot.specificStartTime, requestedAt);
+    const specificEnd = parseFlexibleDate(slot.specificEndTime, specificStart || requestedAt);
+
+    if (!isValidDate(specificStart)) {
+      return {
+        dayLabel,
+        preferredWindow,
+        selectedDateTime: isHe ? "לא נבחר תאריך ושעה" : "Date and time not selected"
+      };
+    }
+
+    const dateText = specificStart.toLocaleDateString(isHe ? "he-IL" : "en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    });
+    const startTime = specificStart.toLocaleTimeString(isHe ? "he-IL" : "en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    });
+    const endTime = isValidDate(specificEnd)
+      ? specificEnd.toLocaleTimeString(isHe ? "he-IL" : "en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
+      : null;
+
+    return {
+      dayLabel,
+      preferredWindow,
+      selectedDateTime: endTime ? `${dateText} ${startTime} - ${endTime}` : `${dateText} ${startTime}`
+    };
   };
 
   // Update timers every minute
@@ -93,8 +139,11 @@ export default function LessonRequestsPage() {
     const updateTimers = () => {
       const newTimers = {};
       [...requestsAsStudent, ...requestsAsTeacher].forEach(r => {
-        if (r.status === "pending" && r.lessonDateTime) {
-          newTimers[r.id] = calculateTimeRemaining(r.lessonDateTime);
+        if (r.status === "pending") {
+          const timer = calculateTimeRemaining(r);
+          if (timer) {
+            newTimers[r.id] = timer;
+          }
         }
       });
       setTimers(newTimers);
@@ -224,13 +273,17 @@ export default function LessonRequestsPage() {
             requestsAsStudent.map(req => {
               const statusStyle = getStatusColor(req.status);
               const timer = timers[req.id];
-              const lessonDate = formatLessonDate(req.lessonDateTime);
-              const requestDate = new Date(req.requestedAt).toLocaleString('en-US', { 
+              const lessonDate = formatLessonDate(req);
+              const slotInfo = buildRequestedSlotSummary(req);
+              const requestDateObj = parseFlexibleDate(req.requestedAt);
+              const requestDate = isValidDate(requestDateObj)
+                ? requestDateObj.toLocaleString(isHe ? 'he-IL' : 'en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 hour: '2-digit', 
                 minute: '2-digit' 
-              });
+              })
+                : (isHe ? "לא זמין" : "N/A");
               
               return (
                 <div key={req.id} style={styles.card}>
@@ -255,6 +308,18 @@ export default function LessonRequestsPage() {
                     <div style={styles.infoRow}>
                       <strong>{isHe ? "שיעור מתוכנן:" : "Lesson Scheduled:"}</strong>
                       <span style={{ fontWeight: 600, color: "#0ea5e9" }}>{lessonDate}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <strong>{isHe ? "יום מועדף:" : "Preferred day:"}</strong>
+                      <span>{slotInfo.dayLabel}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <strong>{isHe ? "חלון שנשלח:" : "Requested window:"}</strong>
+                      <span>{slotInfo.preferredWindow}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <strong>{isHe ? "תאריך ושעה שנבחרו:" : "Selected date & time:"}</strong>
+                      <span>{slotInfo.selectedDateTime}</span>
                     </div>
                     {req.message && (
                       <div style={styles.infoRow}>
@@ -291,6 +356,11 @@ export default function LessonRequestsPage() {
                         )}
                       </div>
                     )}
+                    {req.status === "pending" && !timer && (
+                      <div style={styles.warningInfo}>
+                        {isHe ? "⏱️ מועד שיעור לא תקין או חסר - יש לעדכן בקשה זו." : "⏱️ Lesson time is missing or invalid for this request."}
+                      </div>
+                    )}
                   </div>
 
                   {req.status === "pending" && !timer?.expired && (
@@ -323,13 +393,17 @@ export default function LessonRequestsPage() {
             requestsAsTeacher.map(req => {
               const statusStyle = getStatusColor(req.status);
               const timer = timers[req.id];
-              const lessonDate = formatLessonDate(req.lessonDateTime);
-              const requestDate = new Date(req.requestedAt).toLocaleString('en-US', { 
+              const lessonDate = formatLessonDate(req);
+              const slotInfo = buildRequestedSlotSummary(req);
+              const requestDateObj = parseFlexibleDate(req.requestedAt);
+              const requestDate = isValidDate(requestDateObj)
+                ? requestDateObj.toLocaleString(isHe ? 'he-IL' : 'en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 hour: '2-digit', 
                 minute: '2-digit' 
-              });
+              })
+                : (isHe ? "לא זמין" : "N/A");
               
               return (
                 <div key={req.id} style={styles.card}>
@@ -354,6 +428,18 @@ export default function LessonRequestsPage() {
                     <div style={styles.infoRow}>
                       <strong>{isHe ? "שיעור מתוכנן:" : "Lesson Scheduled:"}</strong>
                       <span style={{ fontWeight: 600, color: "#0ea5e9" }}>{lessonDate}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <strong>{isHe ? "יום מועדף:" : "Preferred day:"}</strong>
+                      <span>{slotInfo.dayLabel}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <strong>{isHe ? "חלון שנשלח:" : "Requested window:"}</strong>
+                      <span>{slotInfo.preferredWindow}</span>
+                    </div>
+                    <div style={styles.infoRow}>
+                      <strong>{isHe ? "תאריך ושעה שנבחרו:" : "Selected date & time:"}</strong>
+                      <span>{slotInfo.selectedDateTime}</span>
                     </div>
                     {req.message && (
                       <div style={styles.infoRow}>
@@ -382,6 +468,11 @@ export default function LessonRequestsPage() {
                         ) : (
                           isHe ? `⏱️ יש לאשר תוך: ${timer.text} (6 שעות לפני השיעור)` : `⏱️ You must approve within: ${timer.text} (6h before lesson)`
                         )}
+                      </div>
+                    )}
+                    {req.status === "pending" && !timer && (
+                      <div style={styles.warningInfo}>
+                        {isHe ? "⏱️ מועד שיעור לא תקין או חסר - יש לאשר/לדחות ידנית." : "⏱️ Lesson time is missing or invalid. Please approve/reject manually."}
                       </div>
                     )}
                   </div>
@@ -535,6 +626,16 @@ const styles = {
     color: "#64748b",
     fontWeight: 700,
     cursor: "pointer",
+    fontSize: 14
+  },
+  warningInfo: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    border: "2px solid #f59e0b",
+    background: "#fef3c7",
+    color: "#92400e",
+    fontWeight: 700,
     fontSize: 14
   },
   emptyState: {

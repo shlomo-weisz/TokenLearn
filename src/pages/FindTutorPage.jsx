@@ -8,7 +8,7 @@ import { dedupeCoursesById, normalizeCourse } from "../lib/courseUtils";
 
 export default function FindTutorPage() {
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [minRating, setMinRating] = useState("1");
+  const [minRating, setMinRating] = useState("0");
   const [minLessons, setMinLessons] = useState("0");
   const [selectedTutorForBooking, setSelectedTutorForBooking] = useState(null);
   const [selectedTutorForProfile, setSelectedTutorForProfile] = useState(null);
@@ -39,7 +39,7 @@ export default function FindTutorPage() {
     let isMounted = true;
 
     const loadTutors = async () => {
-      const minRatingNumber = Number(minRating || 1);
+      const minRatingNumber = Number(minRating || 0);
       const selected = normalizeCourse(selectedCourse);
       const courseQuery = selected?.courseNumber || selected?.nameHe || selected?.nameEn || selected?.name || undefined;
       const result = await searchTutors({
@@ -64,7 +64,7 @@ export default function FindTutorPage() {
 
   const filteredTutors = useMemo(() => {
     return tutors.filter(t => {
-      const byRating = t.rating >= Number(minRating || 1);
+      const byRating = t.rating >= Number(minRating || 0);
       const lessonsCount = t.lessons ?? t.totalLessonsAsTutor ?? 0;
       const byLessons = lessonsCount >= Number(minLessons || 0);
       return byRating && byLessons;
@@ -102,10 +102,10 @@ export default function FindTutorPage() {
         />
 
         <div style={{ display: "grid", gap: 6 }}>
-          <label style={{ fontWeight: 700 }}>{isHe ? "דירוג מינימלי (1-5)" : "Min Rating (1-5)"}</label>
+          <label style={{ fontWeight: 700 }}>{isHe ? "דירוג מינימלי (0-5)" : "Min Rating (0-5)"}</label>
           <input
             type="number"
-            min="1"
+            min="0"
             max="5"
             step="0.1"
             value={minRating}
