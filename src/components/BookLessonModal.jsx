@@ -27,6 +27,14 @@ const minutesToTimeString = (totalMinutes) => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 
+const toLocalDateTime = (dateValue, timeValue) => {
+  if (!dateValue || !timeValue) {
+    return null;
+  }
+  const parsed = new Date(`${dateValue}T${timeValue}:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export default function BookLessonModal({ tutor, onClose, onBook }) {
   const { language } = useI18n();
   const isHe = language === "he";
@@ -123,6 +131,20 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
     // Validate end time (1 hour later) is within available range
     if (endMinutes > slotEndMinutes) {
       addNotification(isHe ? `השיעור יסתיים ב-${specificEndTime}, אחרי הזמן הזמין (${selectedSlot.endTime}). בחר/י שעה מוקדמת יותר.` : `The lesson would end at ${specificEndTime}, which is after the available time (${selectedSlot.endTime}). Please select an earlier start time.`, "error");
+      return;
+    }
+
+    const lessonStart = toLocalDateTime(selectedDate, specificStartTime);
+    if (!lessonStart) {
+      addNotification(isHe ? "תאריך או שעת השיעור אינם תקינים." : "Lesson date/time is invalid.", "error");
+      return;
+    }
+    const sixHoursFromNow = new Date(Date.now() + (6 * 60 * 60 * 1000));
+    if (lessonStart <= sixHoursFromNow) {
+      addNotification(
+        isHe ? "אפשר לקבוע שיעור רק אם תחילתו בעוד יותר מ-6 שעות." : "Lessons must be scheduled more than 6 hours in advance.",
+        "error"
+      );
       return;
     }
 

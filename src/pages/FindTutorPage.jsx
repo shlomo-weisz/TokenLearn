@@ -8,6 +8,7 @@ import { dedupeCoursesById, normalizeCourse } from "../lib/courseUtils";
 
 export default function FindTutorPage() {
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [searchName, setSearchName] = useState("");
   const [minRating, setMinRating] = useState("0");
   const [minLessons, setMinLessons] = useState("0");
   const [selectedTutorForBooking, setSelectedTutorForBooking] = useState(null);
@@ -44,6 +45,7 @@ export default function FindTutorPage() {
       const courseQuery = selected?.courseNumber || selected?.nameHe || selected?.nameEn || selected?.name || undefined;
       const result = await searchTutors({
         course: courseQuery,
+        name: searchName.trim() || undefined,
         minRating: Number.isNaN(minRatingNumber) ? undefined : minRatingNumber,
         limit: 50
       });
@@ -58,7 +60,7 @@ export default function FindTutorPage() {
       isMounted = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourse, minRating]);
+  }, [selectedCourse, minRating, searchName]);
 
   const handleBook = () => {};
 
@@ -102,6 +104,17 @@ export default function FindTutorPage() {
         />
 
         <div style={{ display: "grid", gap: 6 }}>
+          <label style={{ fontWeight: 700 }}>{isHe ? "שם מורה" : "Tutor Name"}</label>
+          <input
+            type="text"
+            value={searchName}
+            onChange={e => setSearchName(e.target.value)}
+            placeholder={isHe ? "חיפוש לפי שם פרטי או משפחה" : "Search by first or last name"}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ display: "grid", gap: 6 }}>
           <label style={{ fontWeight: 700 }}>{isHe ? "דירוג מינימלי (0-5)" : "Min Rating (0-5)"}</label>
           <input
             type="number"
@@ -133,44 +146,58 @@ export default function FindTutorPage() {
             {isHe ? "טוען מורים..." : "Loading tutors..."}
           </div>
         )}
-        {filteredTutors.map(t => (
-          <div
-            key={t.id}
-            style={{
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: 14,
-              background: "white",
-              boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)",
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: 12,
-              alignItems: "center"
-            }}
-          >
-            <div style={{ display: "grid", gap: 4 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
-              <div style={{ color: "#475569", fontSize: 14 }}>
-                {isHe ? "קורסים" : "Courses"}: {(Array.isArray(t.courses) ? t.courses : []).join(", ")} • {isHe ? "דירוג" : "Rating"}: {t.rating} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
+        {filteredTutors.map(t => {
+          const availabilityCount = Array.isArray(t.availabilityAsTeacher) ? t.availabilityAsTeacher.length : 0;
+          const canBook = availabilityCount > 0;
+
+          return (
+            <div
+              key={t.id}
+              style={{
+                border: "1px solid #e2e8f0",
+                borderRadius: 12,
+                padding: 14,
+                background: "white",
+                boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)",
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: 12,
+                alignItems: "center"
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
+                <div style={{ color: "#475569", fontSize: 14 }}>
+                  {isHe ? "קורסים" : "Courses"}: {(Array.isArray(t.courses) ? t.courses : []).join(", ")} • {isHe ? "דירוג" : "Rating"}: {t.rating} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
+                </div>
+                <div style={{ color: canBook ? "#166534" : "#b45309", fontSize: 13, fontWeight: 600 }}>
+                  {canBook
+                    ? (isHe ? `זמינות להוראה: ${availabilityCount} חלונות זמן` : `Availability: ${availabilityCount} time slots`)
+                    : (isHe ? "כרגע אין חלונות זמן זמינים לקביעת שיעור" : "No available time slots for booking right now")}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  style={{
+                    ...primaryBtn,
+                    ...(canBook ? {} : disabledBtn)
+                  }}
+                  onClick={() => canBook && setSelectedTutorForBooking(t)}
+                  disabled={!canBook}
+                >
+                  {canBook ? (isHe ? "קביעת שיעור" : "Schedule Lesson") : (isHe ? "אין זמינות" : "No Availability")}
+                </button>
+                <button
+                  style={ghostBtn}
+                  onClick={() => setSelectedTutorForProfile(t)}
+                >
+                  {isHe ? "צפייה בפרופיל" : "View Profile"}
+                </button>
               </div>
             </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button 
-                style={primaryBtn}
-                onClick={() => setSelectedTutorForBooking(t)}
-              >
-                {isHe ? "קביעת שיעור" : "Schedule Lesson"}
-              </button>
-              <button 
-                style={ghostBtn}
-                onClick={() => setSelectedTutorForProfile(t)}
-              >
-                {isHe ? "צפייה בפרופיל" : "View Profile"}
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {filteredTutors.length === 0 && (
           <div style={{
@@ -222,6 +249,13 @@ const primaryBtn = {
   color: "#0b1021",
   fontWeight: 700,
   cursor: "pointer"
+};
+
+const disabledBtn = {
+  background: "#e2e8f0",
+  borderColor: "#cbd5e1",
+  color: "#64748b",
+  cursor: "not-allowed"
 };
 
 const ghostBtn = {

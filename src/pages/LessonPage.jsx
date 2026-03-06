@@ -1,51 +1,105 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useApp } from "../context/useApp";
-import Card from "../components/Card";
+import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button";
+import Card from "../components/Card";
 import ConfirmModal from "../components/ConfirmModal";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useApp } from "../context/useApp";
 import { useI18n } from "../i18n/useI18n";
+import { formatNotificationDate } from "../lib/notificationInbox";
 
 export default function LessonPage() {
   const { language } = useI18n();
   const isHe = language === "he";
   const { id: lessonId } = useParams();
   const navigate = useNavigate();
-  const { completeLesson, rateLesson, cancelLesson, getLessonDetails, addNotification, loading } = useApp();
-  
+  const {
+    completeLesson,
+    rateLesson,
+    cancelLesson,
+    getLessonDetails,
+    getNotifications,
+    markNotificationsRead,
+    sendLessonMessage,
+    addNotification,
+    loading
+  } = useApp();
+
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSendingCoordination, setIsSendingCoordination] = useState(false);
+  const [coordinationDraft, setCoordinationDraft] = useState("");
+  const [coordinationMessages, setCoordinationMessages] = useState([]);
 
   const [lesson, setLesson] = useState({
     id: lessonId || 1,
     role: "student",
-    studentId: "student_1",
-    studentName: "John Doe",
-    tutorId: "tutor_1",
-    tutorName: "Dr. Sarah Cohen",
-    tutorRating: 4.9,
-    course: "Algorithms - Dynamic Programming",
-    dateTime: "2025-12-24T18:00:00",
-    endTime: "2025-12-24T19:00:00",
+    studentId: null,
+    studentName: "",
+    tutorId: null,
+    tutorName: "",
+    tutorRating: null,
+    course: "",
+    dateTime: "",
+    startTime: "",
+    endTime: "",
     status: "scheduled",
-    message: "I need help understanding memoization and tabulation approaches.",
+    message: "",
     tokenCost: 1,
     completedAt: null,
     ratedAt: null,
     myRating: null
   });
 
+  const loadCoordinationMessages = async () => {
+    if (!lessonId) {
+      return;
+    }
+
+    setIsLoadingMessages(true);
+    const result = await getNotifications({
+      lessonId,
+      eventType: "LESSON_MESSAGE",
+      limit: 30
+    });
+    setIsLoadingMessages(false);
+
+    if (!result.success) {
+      return;
+    }
+
+    const items = result.data || [];
+    setCoordinationMessages(items);
+
+    const unreadIds = items
+      .filter((item) => !item.isRead && !item.isOwnMessage)
+      .map((item) => item.id);
+
+    if (unreadIds.length > 0) {
+      await markNotificationsRead(unreadIds);
+      setCoordinationMessages((prev) => prev.map((item) => (
+        unreadIds.includes(item.id) ? { ...item, isRead: true } : item
+      )));
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     const loadLesson = async () => {
-      if (!lessonId) return;
+      if (!lessonId) {
+        return;
+      }
+
       const result = await getLessonDetails(lessonId);
-      if (!isMounted || !result.success || !result.data) return;
+      if (!isMounted || !result.success || !result.data) {
+        return;
+      }
+
       setLesson((prev) => ({ ...prev, ...result.data }));
     };
 
@@ -57,24 +111,33 @@ export default function LessonPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
 
+  useEffect(() => {
+    loadCoordinationMessages();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
   const isStudent = lesson.role === "student";
-  const otherPersonName = isStudent ? lesson.tutorName : lesson.studentName;
+  const otherPersonName = (isStudent ? lesson.tutorName : lesson.studentName) || (isHe ? "משתמש/ת" : "User");
   const otherPersonRole = isStudent ? (isHe ? "מורה" : "Tutor") : (isHe ? "תלמיד/ה" : "Student");
 
   const formatDateTime = (dateStr) => {
     const date = new Date(dateStr);
-    return date.toLocaleString(isHe ? 'he-IL' : 'en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (Number.isNaN(date.getTime())) {
+      return isHe ? "לא זמין" : "Not available";
+    }
+
+    return date.toLocaleString(isHe ? "he-IL" : "en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
     });
   };
 
   const handleStartLesson = () => {
-    setLesson(prev => ({ ...prev, status: "in-progress" }));
+    setLesson((prev) => ({ ...prev, status: "in-progress" }));
     addNotification(isHe ? "השיעור התחיל!" : "Lesson started!", "success");
   };
 
@@ -85,10 +148,10 @@ export default function LessonPage() {
       tokenCost: lesson.tokenCost
     });
     setIsSubmitting(false);
-    
+
     if (result.success) {
-      setLesson(prev => ({ 
-        ...prev, 
+      setLesson((prev) => ({
+        ...prev,
         status: "completed",
         completedAt: new Date().toISOString()
       }));
@@ -106,9 +169,9 @@ export default function LessonPage() {
     });
     setIsSubmitting(false);
     setShowCancelModal(false);
-    
+
     if (result.success) {
-      setLesson(prev => ({ ...prev, status: "cancelled" }));
+      setLesson((prev) => ({ ...prev, status: "cancelled" }));
     }
   };
 
@@ -123,13 +186,31 @@ export default function LessonPage() {
     setIsSubmitting(false);
 
     if (result.success) {
-      setLesson(prev => ({ 
-        ...prev, 
+      setLesson((prev) => ({
+        ...prev,
         ratedAt: new Date().toISOString(),
         myRating: { rating, comment }
       }));
       setShowRatingForm(false);
     }
+  };
+
+  const handleSendCoordination = async () => {
+    if (!coordinationDraft.trim()) {
+      addNotification(isHe ? "נא לכתוב הודעה לפני השליחה" : "Please write a message before sending", "error");
+      return;
+    }
+
+    setIsSendingCoordination(true);
+    const result = await sendLessonMessage(lesson.id, coordinationDraft.trim());
+    setIsSendingCoordination(false);
+
+    if (!result.success) {
+      return;
+    }
+
+    setCoordinationDraft("");
+    await loadCoordinationMessages();
   };
 
   const getStatusBadge = (status) => {
@@ -140,25 +221,28 @@ export default function LessonPage() {
       cancelled: { bg: "#fee2e2", color: "#991b1b", text: isHe ? "✕ בוטל" : "✕ Cancelled" }
     };
     const style = statusStyles[status] || statusStyles.scheduled;
-    
+
     return (
-      <span style={{
-        padding: "8px 16px",
-        borderRadius: 20,
-        background: style.bg,
-        color: style.color,
-        fontWeight: 700,
-        fontSize: 14
-      }}>
+      <span
+        style={{
+          padding: "8px 16px",
+          borderRadius: 20,
+          background: style.bg,
+          color: style.color,
+          fontWeight: 700,
+          fontSize: 14
+        }}
+      >
         {style.text}
       </span>
     );
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
+    <div style={{ maxWidth: 860, margin: "0 auto", padding: 16 }}>
       {loading && <LoadingSpinner fullScreen />}
-      <button 
+
+      <button
         onClick={() => navigate(-1)}
         style={{
           background: "none",
@@ -175,11 +259,11 @@ export default function LessonPage() {
         ← {isHe ? "חזרה" : "Back"}
       </button>
 
-      <Card>
+      <Card style={{ maxWidth: "100%" }} hoverable={false}>
         <div style={{ display: "grid", gap: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
-              <h1 style={{ margin: "0 0 8px 0", fontSize: 24 }}>{lesson.course}</h1>
+              <h1 style={{ margin: "0 0 8px 0", fontSize: 24 }}>{lesson.course || (isHe ? "שיעור" : "Lesson")}</h1>
               <div style={{ color: "#64748b", fontSize: 14 }}>
                 {isHe ? "שיעור" : "Lesson"} #{lesson.id}
               </div>
@@ -209,35 +293,87 @@ export default function LessonPage() {
           <div style={styles.section}>
             <h3 style={styles.sectionTitle}>📅 {isHe ? "תאריך ושעה" : "Date & Time"}</h3>
             <div style={{ fontSize: 16 }}>
-              {formatDateTime(lesson.dateTime)}
+              {formatDateTime(lesson.dateTime || lesson.startTime)}
             </div>
             <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
-              Duration: 1 hour
+              {isHe ? "משך השיעור: שעה" : "Duration: 1 hour"}
             </div>
           </div>
 
           {lesson.message && (
             <div style={styles.section}>
-              <h3 style={styles.sectionTitle}>💬 {isHe ? "הודעה" : "Message"}</h3>
-              <div style={{
-                padding: 16,
-                background: "#f8fafc",
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                color: "#334155",
-                lineHeight: 1.6
-              }}>
+              <h3 style={styles.sectionTitle}>💬 {isHe ? "הודעת הבקשה" : "Request Message"}</h3>
+              <div style={styles.requestMessageBox}>
                 {lesson.message}
               </div>
             </div>
           )}
+
+          <div style={styles.section}>
+            <div style={styles.sectionHeader}>
+              <h3 style={styles.sectionTitle}>✉️ {isHe ? "תיאום והודעות" : "Coordination Messages"}</h3>
+              {isLoadingMessages && (
+                <span style={styles.smallMeta}>{isHe ? "טוען..." : "Loading..."}</span>
+              )}
+            </div>
+
+            <div style={styles.threadWrap}>
+              {coordinationMessages.length === 0 ? (
+                <div style={styles.emptyThread}>
+                  {isHe ? "עדיין אין הודעות תיאום לשיעור הזה." : "No coordination messages for this lesson yet."}
+                </div>
+              ) : (
+                coordinationMessages
+                  .slice()
+                  .reverse()
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        ...styles.messageBubble,
+                        ...(item.isOwnMessage ? styles.messageBubbleOwn : styles.messageBubbleOther)
+                      }}
+                    >
+                      <div style={styles.messageMetaRow}>
+                        <strong>{item.isOwnMessage ? (isHe ? "אני" : "You") : (item.senderName || otherPersonName)}</strong>
+                        <span style={styles.smallMeta}>
+                          {formatNotificationDate(item.createdAt || item.scheduledAt, language)}
+                        </span>
+                      </div>
+                      <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                        {item.messageBody}
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            {lesson.status === "scheduled" && (
+              <div style={styles.composeWrap}>
+                <textarea
+                  value={coordinationDraft}
+                  onChange={(event) => setCoordinationDraft(event.target.value)}
+                  placeholder={isHe
+                    ? "כתבו כאן הודעת תיאום, קישור לפגישה, שינוי קטן או תזכורת."
+                    : "Write a coordination update, meeting link, small change, or reminder."}
+                  style={styles.textarea}
+                  rows={3}
+                />
+                <div style={styles.composeActions}>
+                  <Button onClick={handleSendCoordination} disabled={isSendingCoordination}>
+                    {isSendingCoordination ? (isHe ? "שולח/ת..." : "Sending...") : (isHe ? "שליחת הודעה" : "Send Message")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {lesson.status === "scheduled" && (
             <div style={styles.actions}>
               <Button onClick={handleStartLesson}>
                 🎬 {isHe ? "התחלת שיעור" : "Start Lesson"}
               </Button>
-              <button 
+              <button
                 onClick={() => setShowCancelModal(true)}
                 style={styles.dangerBtn}
               >
@@ -265,13 +401,13 @@ export default function LessonPage() {
           {showRatingForm && (
             <div style={styles.ratingSection}>
               <h3 style={styles.sectionTitle}>⭐ {isHe ? "דרג/י את השיעור" : "Rate Your Lesson"}</h3>
-              
+
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
                   {isHe ? `איך הייתה החוויה שלך עם ${lesson.tutorName}?` : `How was your experience with ${lesson.tutorName}?`}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {[1, 2, 3, 4, 5].map(star => (
+                  {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       onClick={() => setRating(star)}
@@ -298,7 +434,7 @@ export default function LessonPage() {
                 </label>
                 <textarea
                   value={comment}
-                  onChange={e => setComment(e.target.value)}
+                  onChange={(event) => setComment(event.target.value)}
                   placeholder={isHe ? "שתף/י את החוויה שלך..." : "Share your experience..."}
                   style={styles.textarea}
                   rows={3}
@@ -309,7 +445,7 @@ export default function LessonPage() {
                 <Button onClick={handleSubmitRating} disabled={isSubmitting}>
                   {isSubmitting ? (isHe ? "שולח/ת..." : "Submitting...") : (isHe ? "שליחת דירוג" : "Submit Rating")}
                 </Button>
-                <button 
+                <button
                   onClick={() => setShowRatingForm(false)}
                   style={styles.cancelBtn}
                 >
@@ -323,7 +459,7 @@ export default function LessonPage() {
             <div style={styles.ratingSection}>
               <h3 style={styles.sectionTitle}>{isHe ? "הדירוג שלך" : "Your Rating"}</h3>
               <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-                {[1, 2, 3, 4, 5].map(star => (
+                {[1, 2, 3, 4, 5].map((star) => (
                   <span key={star} style={{ fontSize: 24, opacity: star <= lesson.myRating.rating ? 1 : 0.3 }}>
                     ⭐
                   </span>
@@ -338,14 +474,7 @@ export default function LessonPage() {
           )}
 
           {lesson.status === "cancelled" && (
-            <div style={{
-              padding: 16,
-              background: "#fee2e2",
-              border: "1px solid #fca5a5",
-              borderRadius: 12,
-              color: "#991b1b",
-              textAlign: "center"
-            }}>
+            <div style={styles.cancelledNotice}>
               {isHe ? "השיעור הזה בוטל. כל הטוקנים הוחזרו." : "This lesson has been cancelled. Any tokens have been refunded."}
             </div>
           )}
@@ -387,7 +516,13 @@ const styles = {
   },
   section: {
     display: "grid",
-    gap: 8
+    gap: 10
+  },
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12
   },
   sectionTitle: {
     margin: 0,
@@ -396,6 +531,64 @@ const styles = {
     color: "#64748b",
     textTransform: "uppercase",
     letterSpacing: "0.5px"
+  },
+  requestMessageBox: {
+    padding: 16,
+    background: "#f8fafc",
+    borderRadius: 12,
+    border: "1px solid #e2e8f0",
+    color: "#334155",
+    lineHeight: 1.6
+  },
+  threadWrap: {
+    display: "grid",
+    gap: 10,
+    padding: 16,
+    background: "#f8fafc",
+    borderRadius: 14,
+    border: "1px solid #e2e8f0"
+  },
+  emptyThread: {
+    color: "#64748b",
+    fontSize: 14
+  },
+  messageBubble: {
+    maxWidth: "86%",
+    padding: "12px 14px",
+    borderRadius: 14,
+    display: "grid",
+    gap: 8
+  },
+  messageBubbleOwn: {
+    justifySelf: "end",
+    background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
+    border: "1px solid #93c5fd",
+    color: "#1e3a8a"
+  },
+  messageBubbleOther: {
+    justifySelf: "start",
+    background: "linear-gradient(135deg, #ecfeff, #cffafe)",
+    border: "1px solid #67e8f9",
+    color: "#155e75"
+  },
+  messageMetaRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    fontSize: 12
+  },
+  smallMeta: {
+    fontSize: 12,
+    color: "#64748b"
+  },
+  composeWrap: {
+    display: "grid",
+    gap: 12
+  },
+  composeActions: {
+    display: "flex",
+    justifyContent: "flex-end"
   },
   actions: {
     display: "flex",
@@ -438,5 +631,13 @@ const styles = {
     fontWeight: 700,
     cursor: "pointer",
     fontSize: 14
+  },
+  cancelledNotice: {
+    padding: 16,
+    background: "#fee2e2",
+    border: "1px solid #fca5a5",
+    borderRadius: 12,
+    color: "#991b1b",
+    textAlign: "center"
   }
 };

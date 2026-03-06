@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../context/useApp";
 import Input from "../components/Input";
 import Button from "../components/Button";
@@ -125,7 +125,6 @@ export default function PersonalAreaPage() {
   const [phone, setPhone] = useState(user?.phone || "");
   const [photoUrl, setPhotoUrl] = useState(user?.photoUrl || "");
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
-  const objectUrlRef = useRef(null);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Courses - initialize from user data or with defaults
@@ -165,14 +164,6 @@ export default function PersonalAreaPage() {
       isMounted = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -288,24 +279,8 @@ export default function PersonalAreaPage() {
   }
 
   function handleImageUrlChange(value) {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
     setHasChanges(true);
     setPhotoUrl(value);
-  }
-
-  function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-    }
-    const objectUrl = URL.createObjectURL(file);
-    objectUrlRef.current = objectUrl;
-    setHasChanges(true);
-    setPhotoUrl(objectUrl);
   }
 
   async function handleSave() {
@@ -433,7 +408,7 @@ export default function PersonalAreaPage() {
       firstName: cleanFirstName,
       lastName: cleanLastName,
       phone: cleanPhone,
-      photoUrl: cleanPhotoUrl || null,
+      photoUrl: cleanPhotoUrl,
       coursesAsTeacher: validCoursesTeacher,
       coursesAsStudent: validCoursesStudent,
       availabilityAsTeacher: validAvailabilityTeacher,
@@ -561,17 +536,25 @@ export default function PersonalAreaPage() {
           </div>
 
           <div style={{ display: "grid", gap: 8, minWidth: 240 }}>
-            <label style={{ fontSize: 14, fontWeight: 600 }}>{isHe ? "העלאה מהמחשב" : "Upload from computer"}</label>
-            <input type="file" accept="image/*" onChange={handleFileChange} />
-            <label style={{ fontSize: 14, fontWeight: 600 }}>{isHe ? "או הדבקת קישור לתמונה" : "Or paste image URL"}</label>
+            <label style={{ fontSize: 14, fontWeight: 600 }}>{isHe ? "קישור ישיר לתמונה" : "Direct image URL"}</label>
             <Input
               label={null}
               value={photoUrl}
               onChange={handleImageUrlChange}
               placeholder={isHe ? "https://example.com/photo.jpg" : "https://example.com/photo.jpg"}
             />
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              {isHe
+                ? "כרגע נשמרים רק קישורי http/https ישירים לתמונה."
+                : "Only direct http/https image URLs are currently supported."}
+            </div>
           </div>
         </div>
+        {photoUrl && photoLoadFailed && (
+          <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 700 }}>
+            {isHe ? "לא ניתן לטעון את התמונה מהקישור שסופק." : "Could not load the image from the provided URL."}
+          </div>
+        )}
 
         <Input label={isHe ? "שם פרטי" : "First Name"} value={firstName} onChange={(v) => { setFirstName(v); setHasChanges(true); }} placeholder={isHe ? "הכנס/י שם פרטי" : "Enter your first name"} />
         <Input label={isHe ? "שם משפחה" : "Last Name"} value={lastName} onChange={(v) => { setLastName(v); setHasChanges(true); }} placeholder={isHe ? "הכנס/י שם משפחה" : "Enter your last name"} />

@@ -1,6 +1,6 @@
 const NAME_REGEX = /^[\p{L}\p{M}](?:[\p{L}\p{M}' -]{0,48}[\p{L}\p{M}])?$/u;
 const PHONE_REGEX = /^\+?[0-9][0-9()\-\s]{5,19}$/;
-const PHOTO_URL_REGEX = /^(https?:\/\/[^\s<>]+|blob:[^\s<>]+)$/i;
+const PHOTO_URL_REGEX = /^https?:\/\/[^\s<>]+$/i;
 const HTML_DELIMITERS_REGEX = /[<>]/;
 
 export const isValidName = (value) => NAME_REGEX.test(String(value || "").trim());

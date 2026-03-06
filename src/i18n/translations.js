@@ -16,6 +16,7 @@ export const translations = {
       rating: 'Rating',
       tokenHistory: 'Token History',
       lessonHistory: 'Lesson History',
+      messages: 'Messages',
       admin: 'Admin',
       logout: 'Logout'
     },
@@ -99,6 +100,7 @@ export const translations = {
       rating: 'דירוג',
       tokenHistory: 'היסטוריית טוקנים',
       lessonHistory: 'היסטוריית שיעורים',
+      messages: 'הודעות',
       admin: 'ניהול',
       logout: 'התנתקות'
     },

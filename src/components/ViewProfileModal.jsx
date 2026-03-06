@@ -8,6 +8,7 @@ export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
   const { language } = useI18n();
   const isHe = language === "he";
   const availability = sortAvailabilitySlotsByDayAndTime(tutor?.availabilityAsTeacher || tutor?.availability || []);
+  const canBook = availability.length > 0;
 
   const rawCourses = tutor?.coursesAsTeacher || tutor?.courses || [];
 
@@ -118,11 +119,15 @@ export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
             <button onClick={onClose} style={styles.cancelBtn}>
               {isHe ? "סגירה" : "Close"}
             </button>
-            <Button onClick={() => {
-              onClose();
-              onBookLesson?.();
-            }}>
-              {isHe ? "קביעת שיעור" : "Book a Lesson"}
+            <Button
+              onClick={() => {
+                if (!canBook) return;
+                onClose();
+                onBookLesson?.();
+              }}
+              disabled={!canBook}
+            >
+              {canBook ? (isHe ? "קביעת שיעור" : "Book a Lesson") : (isHe ? "אין זמינות כרגע" : "No Availability")}
             </Button>
           </div>
         </div>

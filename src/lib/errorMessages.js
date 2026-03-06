@@ -78,6 +78,10 @@ const CODE_MESSAGES = {
   INVALID_SPECIFIC_TIME: {
     he: "תאריך או שעת השיעור אינם תקינים.",
     en: "Lesson date/time is invalid."
+  },
+  LESSON_TOO_SOON: {
+    he: "אפשר לקבוע שיעור רק אם תחילתו בעוד יותר מ-6 שעות.",
+    en: "Lessons must be scheduled more than 6 hours in advance."
   }
 };
 

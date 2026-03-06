@@ -19,7 +19,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { t, isRTL } = useI18n();
-  const { tokenSummary, logout, user } = useApp();
+  const { tokenSummary, logout, user, unreadNotificationCount } = useApp();
 
   const isActive = (path) => location.pathname === path;
 
@@ -70,6 +70,14 @@ export default function AppLayout() {
             </Link>
             <Link to="/lesson-history" style={getNavLinkStyle('/lesson-history')}>
               📚 {t('nav.lessonHistory')}
+            </Link>
+            <Link to="/messages" style={getNavLinkStyle('/messages')}>
+              ✉️ {t('nav.messages')}
+              {unreadNotificationCount > 0 && (
+                <span style={styles.badge}>
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </span>
+              )}
             </Link>
             {user?.isAdmin && (
               <Link to="/admin" style={getNavLinkStyle('/admin')}>
@@ -146,6 +154,21 @@ const styles = {
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer'
+  },
+  badge: {
+    marginInlineStart: 8,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 999,
+    padding: '0 7px',
+    background: '#dc2626',
+    color: '#ffffff',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 12,
+    fontWeight: 800,
+    lineHeight: 1
   },
   navIcon: {
     width: 18,
