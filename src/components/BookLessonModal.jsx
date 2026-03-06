@@ -3,7 +3,7 @@ import { useApp } from "../context/useApp";
 import Button from "./Button";
 import { useI18n } from "../i18n/useI18n";
 import CourseAutocomplete from "./CourseAutocomplete";
-import { dedupeCoursesById, getCourseDisplayName, normalizeCourse } from "../lib/courseUtils";
+import { dedupeCoursesById, getCourseDisplayName, getCourseListDisplayName, normalizeCourse } from "../lib/courseUtils";
 import {
   getNextDateForWeekday,
   getWeekdayEnglishFromDateInput,
@@ -47,6 +47,7 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availability = sortAvailabilitySlotsByDayAndTime(tutor?.availabilityAsTeacher || tutor?.availability || []);
+  const tutorCoursesLabel = getCourseListDisplayName(tutor?.courseOptions || tutor?.coursesAsTeacher || tutor?.courses, language);
 
   const courseOptions = dedupeCoursesById(
     Array.isArray(tutor?.courseOptions)
@@ -191,7 +192,7 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
             <div style={{ display: "grid", gap: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>{tutor.name}</div>
               <div style={{ fontSize: 14, color: "#64748b" }}>
-                {isHe ? "דירוג" : "Rating"}: ⭐ {tutor.rating} • {(tutor.courses?.join(", ")) || (isHe ? "אין קורסים זמינים" : "No courses listed")}
+                {isHe ? "דירוג" : "Rating"}: ⭐ {tutor.rating} • {tutorCoursesLabel || (isHe ? "אין קורסים זמינים" : "No courses listed")}
               </div>
               <div style={{ fontSize: 12, color: "#334155" }}>
                 {isHe

@@ -4,6 +4,7 @@ import Button from "../components/Button";
 import ConfirmModal from "../components/ConfirmModal";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useI18n } from "../i18n/useI18n";
+import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { isValidDate, parseFlexibleDate, resolveLessonDateFromRequest } from "../lib/dateTimeUtils";
 import { localizeDayName } from "../lib/dayUtils";
 
@@ -294,7 +295,7 @@ export default function LessonRequestsPage() {
           <div>
             <h3 style={{ margin: 0, fontSize: 18 }}>{request.tutorName}</h3>
             <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
-              ⭐ {request.tutorRating} • {request.course}
+              ⭐ {request.tutorRating} • {getCourseDisplayNameFromSource(request, language)}
             </div>
           </div>
           <div style={{ ...styles.statusBadge, background: statusStyle.bg, border: `1px solid ${statusStyle.border}`, color: statusStyle.text }}>
@@ -361,7 +362,7 @@ export default function LessonRequestsPage() {
           <div>
             <h3 style={{ margin: 0, fontSize: 18 }}>{request.studentName}</h3>
             <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
-              {request.course}
+              {getCourseDisplayNameFromSource(request, language)}
             </div>
           </div>
           <div style={{ ...styles.statusBadge, background: statusStyle.bg, border: `1px solid ${statusStyle.border}`, color: statusStyle.text }}>

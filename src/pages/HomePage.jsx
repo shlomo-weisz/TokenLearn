@@ -4,9 +4,10 @@ import HeaderTopBar from "../components/HeaderTopBar";
 import RecommendedTutors from "../components/RecommendedTutors";
 import PendingRequests from "../components/PendingRequests";
 import FooterStoryAndRules from "../components/FooterStoryAndRules";
-import ConfirmModal from "../components/ConfirmModal";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useI18n } from "../i18n/useI18n";
+import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
+import { getUiMessage } from "../lib/uiMessages";
 
 export default function HomePage() {
   const { language } = useI18n();
@@ -179,7 +180,7 @@ export default function HomePage() {
               setRequests(prev => prev.map((request) => (
                 request.id === requestId ? { ...request, status: 'approved' } : request
               )));
-              addNotification("Lesson approved!", "success");
+              addNotification(getUiMessage("lessonApproved", language), "success");
             }
           }}
           onReject={(requestId) => {
@@ -333,7 +334,7 @@ export default function HomePage() {
                 >
                   <div style={{ display: "grid", gap: 4 }}>
                     <div style={rolePill(lesson.role)}>{lesson.role === "teacher" ? (isHe ? "מורה" : "teacher") : (isHe ? "תלמיד/ה" : "student")}</div>
-                    <div style={{ fontWeight: 700 }}>{lesson.topic}</div>
+                    <div style={{ fontWeight: 700 }}>{getCourseDisplayNameFromSource(lesson, language)}</div>
                     <div style={{ fontSize: 13, color: "#475569" }}>{isHe ? "עם: " : "With: "}{lesson.withUserName}</div>
                     <div style={{ fontSize: 13, color: "#475569" }}>{new Date(lesson.dateTime).toLocaleString()}</div>
                   </div>

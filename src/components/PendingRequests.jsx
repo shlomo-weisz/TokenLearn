@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/useApp";
 import { useI18n } from "../i18n/useI18n";
+import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { isValidDate, parseFlexibleDate, resolveLessonDateFromRequest } from "../lib/dateTimeUtils";
 import { localizeDayName } from "../lib/dayUtils";
 
@@ -116,7 +117,7 @@ export default function PendingRequests({ requests, onApprove, onReject }) {
             return (
               <div key={r.id} style={styles.row}>
                 <div style={{ flex: 1 }}>
-                  <div style={styles.title}>{r.studentName} • {r.course}</div>
+                  <div style={styles.title}>{r.studentName} • {getCourseDisplayNameFromSource(r, language)}</div>
                   <div style={styles.sub}>
                     <div>{isHe ? 'שיעור מתוכנן' : 'Lesson scheduled'}: <b>{lessonDate}</b></div>
                     <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>{isHe ? 'נשלח' : 'Requested'}: {requestDate}</div>

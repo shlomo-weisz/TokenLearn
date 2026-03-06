@@ -6,6 +6,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useApp } from "../context/useApp";
 import { useI18n } from "../i18n/useI18n";
+import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { formatNotificationDate } from "../lib/notificationInbox";
 
 export default function LessonPage() {
@@ -119,6 +120,7 @@ export default function LessonPage() {
   const isStudent = lesson.role === "student";
   const otherPersonName = (isStudent ? lesson.tutorName : lesson.studentName) || (isHe ? "משתמש/ת" : "User");
   const otherPersonRole = isStudent ? (isHe ? "מורה" : "Tutor") : (isHe ? "תלמיד/ה" : "Student");
+  const lessonCourseLabel = getCourseDisplayNameFromSource(lesson, language);
 
   const formatDateTime = (dateStr) => {
     const date = new Date(dateStr);
@@ -263,7 +265,7 @@ export default function LessonPage() {
         <div style={{ display: "grid", gap: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
             <div>
-              <h1 style={{ margin: "0 0 8px 0", fontSize: 24 }}>{lesson.course || (isHe ? "שיעור" : "Lesson")}</h1>
+              <h1 style={{ margin: "0 0 8px 0", fontSize: 24 }}>{lessonCourseLabel || (isHe ? "שיעור" : "Lesson")}</h1>
               <div style={{ color: "#64748b", fontSize: 14 }}>
                 {isHe ? "שיעור" : "Lesson"} #{lesson.id}
               </div>

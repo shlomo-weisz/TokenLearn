@@ -5,6 +5,7 @@ import Card from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useApp } from '../context/useApp';
 import { useI18n } from '../i18n/useI18n';
+import { getCourseDisplayNameFromSource } from '../lib/courseUtils';
 
 const DAY_NAMES = {
   en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -288,6 +289,7 @@ export default function CalendarPage() {
                     <div style={styles.dayPreviewList}>
                       {items.slice(0, 2).map((lesson) => {
                         const tone = getStatusTone(lesson.status);
+                        const courseLabel = getCourseDisplayNameFromSource(lesson, language);
                         return (
                           <div
                             key={lesson.id}
@@ -299,7 +301,7 @@ export default function CalendarPage() {
                             }}
                           >
                             <span>{formatLessonTime(lesson.dateTime)}</span>
-                            <span style={styles.previewTopic}>{lesson.topic}</span>
+                            <span style={styles.previewTopic}>{courseLabel}</span>
                           </div>
                         );
                       })}
@@ -339,6 +341,7 @@ export default function CalendarPage() {
               </div>
             ) : selectedDayLessons.map((lesson) => {
               const tone = getStatusTone(lesson.status);
+              const courseLabel = getCourseDisplayNameFromSource(lesson, language);
               return (
                 <button
                   key={lesson.id}
@@ -347,7 +350,7 @@ export default function CalendarPage() {
                   style={styles.lessonRow}
                 >
                   <div style={styles.lessonRowTop}>
-                    <strong style={{ color: '#0f172a', fontSize: 15 }}>{lesson.topic}</strong>
+                    <strong style={{ color: '#0f172a', fontSize: 15 }}>{courseLabel}</strong>
                     <span style={{
                       ...styles.statusPill,
                       background: tone.background,

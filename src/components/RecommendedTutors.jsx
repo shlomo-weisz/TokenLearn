@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import BookLessonModal from "./BookLessonModal";
 import ViewProfileModal from "./ViewProfileModal";
 import { useI18n } from "../i18n/useI18n";
+import { getCourseListDisplayName } from "../lib/courseUtils";
 
 export default function RecommendedTutors({ tutors }) {
   const [selectedTutorForBooking, setSelectedTutorForBooking] = useState(null);
@@ -22,12 +23,14 @@ export default function RecommendedTutors({ tutors }) {
           <div style={styles.empty}>{isHe ? 'אין כרגע המלצות' : 'No recommendations right now'}</div>
         ) : (
           <div style={styles.grid}>
-            {tutors.map(t => (
-              <div key={t.id} style={styles.card}>
+            {tutors.map(t => {
+              const coursesLabel = getCourseListDisplayName(t.courseOptions || t.courses, language);
+              return (
+                <div key={t.id} style={styles.card}>
                 <div style={styles.name}>{t.name}</div>
                 <div>{isHe ? 'דירוג' : 'Rating'}: <b>{t.rating}</b></div>
-                {t.courses && t.courses.length > 0 && (
-                  <div style={styles.course}>{t.courses.join(", ")}</div>
+                {coursesLabel && (
+                  <div style={styles.course}>{coursesLabel}</div>
                 )}
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => setSelectedTutorForProfile(t)} style={styles.viewBtn}>
@@ -37,8 +40,9 @@ export default function RecommendedTutors({ tutors }) {
                     {isHe ? 'הזמנת שיעור' : 'Book Lesson'}
                   </button>
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

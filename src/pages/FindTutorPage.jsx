@@ -4,7 +4,7 @@ import ViewProfileModal from "../components/ViewProfileModal";
 import CourseAutocomplete from "../components/CourseAutocomplete";
 import { useI18n } from "../i18n/useI18n";
 import { useApp } from "../context/useApp";
-import { dedupeCoursesById, normalizeCourse } from "../lib/courseUtils";
+import { dedupeCoursesById, getCourseListDisplayName, normalizeCourse } from "../lib/courseUtils";
 
 export default function FindTutorPage() {
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -167,6 +167,7 @@ export default function FindTutorPage() {
         {filteredTutors.map(t => {
           const availabilityCount = Array.isArray(t.availabilityAsTeacher) ? t.availabilityAsTeacher.length : 0;
           const canBook = availabilityCount > 0;
+          const coursesLabel = getCourseListDisplayName(t.courseOptions || t.courses, language);
 
           return (
             <div
@@ -186,7 +187,7 @@ export default function FindTutorPage() {
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
                 <div style={{ color: "#475569", fontSize: 14 }}>
-                  {isHe ? "קורסים" : "Courses"}: {(Array.isArray(t.courses) ? t.courses : []).join(", ")} • {isHe ? "דירוג" : "Rating"}: {t.rating} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
+                  {isHe ? "קורסים" : "Courses"}: {coursesLabel || (isHe ? "לא צוין" : "Not listed")} • {isHe ? "דירוג" : "Rating"}: {t.rating} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
                 </div>
                 {t.taughtMeBefore && (
                   <div style={repeatTutorBadgeStyle}>

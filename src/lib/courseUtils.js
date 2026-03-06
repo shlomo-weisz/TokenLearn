@@ -1,4 +1,12 @@
 const normalizeText = (value) => (typeof value === "string" ? value.trim() : "");
+const hasCourseValue = (course) => Boolean(
+  course
+  && (course.courseNumber
+    || course.nameHe
+    || course.nameEn
+    || course.name
+    || course.label)
+);
 
 export const normalizeCourse = (course) => {
   if (!course) {
@@ -37,6 +45,37 @@ export const normalizeCourse = (course) => {
   };
 };
 
+export const courseFromSource = (source, fallbackKeys = ["course", "topic"]) => {
+  const direct = normalizeCourse(source);
+  if (hasCourseValue(direct)) {
+    return direct;
+  }
+
+  if (!source || typeof source !== "object") {
+    return null;
+  }
+
+  const nested = normalizeCourse(source.course && typeof source.course === "object" ? source.course : null);
+  if (hasCourseValue(nested)) {
+    return nested;
+  }
+
+  const label = [
+    normalizeText(source.courseLabel),
+    normalizeText(source.label),
+    ...fallbackKeys.map((key) => normalizeText(source[key]))
+  ].find(Boolean) || "";
+
+  return normalizeCourse({
+    id: Number.isInteger(source.courseId) ? source.courseId : null,
+    courseNumber: source.courseNumber,
+    nameHe: source.courseNameHe ?? source.nameHe,
+    nameEn: source.courseNameEn ?? source.nameEn,
+    name: source.courseName ?? source.name,
+    label
+  });
+};
+
 export const getCourseDisplayName = (course, language = "en") => {
   const normalized = normalizeCourse(course);
   if (!normalized) {
@@ -53,6 +92,30 @@ export const getCourseDisplayName = (course, language = "en") => {
   }
   return title ? `${normalized.courseNumber} - ${title}` : normalized.courseNumber;
 };
+
+export const getCourseDisplayNameFromSource = (source, language = "en", fallbackKeys = ["course", "topic"]) => {
+  const normalized = courseFromSource(source, fallbackKeys);
+  if (hasCourseValue(normalized)) {
+    return getCourseDisplayName(normalized, language);
+  }
+
+  if (typeof source === "string") {
+    return source;
+  }
+
+  if (!source || typeof source !== "object") {
+    return "";
+  }
+
+  return fallbackKeys.map((key) => normalizeText(source[key])).find(Boolean) || "";
+};
+
+export const getCourseListDisplayName = (courses = [], language = "en") => (
+  (Array.isArray(courses) ? courses : [])
+    .map((course) => getCourseDisplayNameFromSource(course, language))
+    .filter(Boolean)
+    .join(", ")
+);
 
 export const getCourseSearchText = (course, language = "en") => {
   const normalized = normalizeCourse(course);

@@ -8,6 +8,7 @@ import {
 } from '../lib/apiClient';
 import { getCurrentUiLanguage, getSessionExpiredMessage, translateErrorMessage } from '../lib/errorMessages';
 import { renderNotificationPreview } from '../lib/notificationInbox';
+import { getUiMessage } from '../lib/uiMessages';
 
 const DEFAULT_USER = {
   id: null,
@@ -200,7 +201,7 @@ export function AppProvider({ children }) {
         body: JSON.stringify(profileData)
       });
       mergeUserState(setUser, payload);
-      addNotification('Profile updated successfully!', 'success');
+      addNotification(getUiMessage('profileUpdated'), 'success');
       return payload;
     });
   };
@@ -225,7 +226,7 @@ export function AppProvider({ children }) {
         });
       }
 
-      addNotification('Lesson request sent successfully!', 'success');
+      addNotification(getUiMessage('lessonRequestSent'), 'success');
       return payload;
     });
   };
@@ -235,7 +236,7 @@ export function AppProvider({ children }) {
       const payload = await apiRequest(`/api/lesson-requests/${requestId}/approve`, {
         method: 'POST'
       });
-      addNotification('Lesson request approved!', 'success');
+      addNotification(getUiMessage('lessonRequestApproved'), 'success');
       return payload;
     });
   };
@@ -246,7 +247,7 @@ export function AppProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ rejectionMessage: reason })
       });
-      addNotification('Lesson request rejected.', 'info');
+      addNotification(getUiMessage('lessonRequestRejected'), 'info');
       return payload;
     });
   };
@@ -256,7 +257,7 @@ export function AppProvider({ children }) {
       const payload = await apiRequest(`/api/lesson-requests/${requestId}`, {
         method: 'DELETE'
       });
-      addNotification('Request cancelled successfully.', 'info');
+      addNotification(getUiMessage('requestCancelled'), 'info');
       return payload;
     });
   };
@@ -267,7 +268,7 @@ export function AppProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ subject, message })
       });
-      addNotification('Your message has been sent to the admin!', 'success');
+      addNotification(getUiMessage('adminMessageSent'), 'success');
       return payload;
     });
   };
@@ -278,7 +279,7 @@ export function AppProvider({ children }) {
         method: 'DELETE',
         body: JSON.stringify({ reason: metadata.reason || 'Cancelled by user' })
       });
-      addNotification('Lesson cancelled successfully', 'success');
+      addNotification(getUiMessage('lessonCancelled'), 'success');
       return payload;
     });
   };
@@ -288,7 +289,7 @@ export function AppProvider({ children }) {
       const payload = await apiRequest(`/api/admin/tutors/${tutorId}/block`, {
         method: 'POST'
       });
-      addNotification('Tutor blocked successfully', 'success');
+      addNotification(getUiMessage('tutorBlocked'), 'success');
       return payload;
     });
   };
@@ -298,7 +299,7 @@ export function AppProvider({ children }) {
       const payload = await apiRequest(`/api/admin/tutors/${tutorId}/unblock`, {
         method: 'POST'
       });
-      addNotification('Tutor unblocked successfully', 'success');
+      addNotification(getUiMessage('tutorUnblocked'), 'success');
       return payload;
     });
   };
@@ -310,7 +311,7 @@ export function AppProvider({ children }) {
         body: JSON.stringify({ email, password })
       });
       await applyAuthPayload(payload);
-      addNotification('Logged in successfully!', 'success');
+      addNotification(getUiMessage('loggedIn'), 'success');
       return payload;
     }, { logoutOnUnauthorized: false });
   };
@@ -322,7 +323,7 @@ export function AppProvider({ children }) {
         body: JSON.stringify(userData)
       });
       await applyAuthPayload(payload);
-      addNotification('Account created successfully!', 'success');
+      addNotification(getUiMessage('accountCreated'), 'success');
       return payload;
     }, { logoutOnUnauthorized: false });
   };
@@ -336,7 +337,7 @@ export function AppProvider({ children }) {
     }, { notifyOnError: false, logoutOnUnauthorized: false });
 
     clearAuthSession();
-    addNotification('Logged out successfully', 'info');
+    addNotification(getUiMessage('loggedOut'), 'info');
 
     return result.success ? result : { success: true, data: { message: 'Logged out locally' } };
   };
@@ -365,7 +366,7 @@ export function AppProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ email, resetToken, newPassword })
       });
-      addNotification('Password reset successfully!', 'success');
+      addNotification(getUiMessage('passwordReset'), 'success');
       return payload;
     });
   };
@@ -526,7 +527,7 @@ export function AppProvider({ children }) {
         method: 'PUT'
       });
       await getTokenBalance();
-      addNotification('Lesson marked as complete!', 'success');
+      addNotification(getUiMessage('lessonCompleted'), 'success');
       return payload;
     });
   };
@@ -543,7 +544,7 @@ export function AppProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ rating, comment })
       });
-      addNotification('Thank you for your feedback!', 'success');
+      addNotification(getUiMessage('feedbackThanks'), 'success');
       return payload;
     });
   };
@@ -617,7 +618,7 @@ export function AppProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ message })
       });
-      addNotification('Message sent successfully.', 'success');
+      addNotification(getUiMessage('messageSent'), 'success');
       return payload;
     });
   };

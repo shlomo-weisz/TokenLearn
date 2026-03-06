@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../context/useApp';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useI18n } from '../i18n/useI18n';
+import { getCourseDisplayNameFromSource } from '../lib/courseUtils';
 
 export default function LessonHistoryPage() {
   const { language } = useI18n();
@@ -36,7 +37,7 @@ export default function LessonHistoryPage() {
           {lessons.map((lesson) => (
             <div key={lesson.id} style={styles.card}>
               <div style={styles.row}>
-                <strong>{lesson.topic}</strong>
+                <strong>{getCourseDisplayNameFromSource(lesson, language)}</strong>
                 <span style={styles.badge}>{lesson.status}</span>
               </div>
               <div style={styles.subRow}>{isHe ? 'תפקיד' : 'Role'}: {lesson.role}</div>

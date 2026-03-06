@@ -5,7 +5,7 @@ import Card from "../components/Card";
 import Input from "../components/Input";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useI18n } from "../i18n/useI18n";
-import { getCourseDisplayName } from "../lib/courseUtils";
+import { getCourseDisplayName, getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl } from "../lib/validation";
 
 export default function AdminPage() {
@@ -300,7 +300,7 @@ export default function AdminPage() {
               <div style={styles.metricCard}><div style={styles.metricLabel}>{isHe ? 'שיעורים החודש' : 'Lessons this month'}</div><div style={styles.metricValue}>{statistics?.lessonsThisMonth ?? 0}</div></div>
             </div>
             <div style={{ marginTop: 16, color: '#334155' }}>
-              <strong>{isHe ? 'קורסים פופולריים:' : 'Popular courses:'}</strong> {(statistics?.mostPopularCourses || []).join(', ') || (isHe ? 'לא זמין' : 'N/A')}
+              <strong>{isHe ? 'קורסים פופולריים:' : 'Popular courses:'}</strong> {(statistics?.mostPopularCourseOptions || []).map((course) => getCourseDisplayName(course, language)).filter(Boolean).join(', ') || (statistics?.mostPopularCourses || []).join(', ') || (isHe ? 'לא זמין' : 'N/A')}
             </div>
           </Card>
         )}
@@ -478,7 +478,7 @@ export default function AdminPage() {
                   <tr key={l.id}>
                     <td style={styles.td}>{l.studentName}</td>
                     <td style={styles.td}>{l.tutorName}</td>
-                    <td style={styles.td}>{l.course}</td>
+                    <td style={styles.td}>{getCourseDisplayNameFromSource(l, language)}</td>
                     <td style={styles.td}>{new Date(l.startTime).toLocaleString(isHe ? "he-IL" : "en-US")}</td>
                     <td style={styles.td}><button style={styles.cancelBtn} onClick={() => cancelLesson(l.id)}>{isHe ? "ביטול" : "Cancel"}</button></td>
                   </tr>
