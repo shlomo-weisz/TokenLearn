@@ -14,6 +14,7 @@ import AdminPage from './pages/AdminPage';
 import TokenHistoryPage from './pages/TokenHistoryPage';
 import LessonHistoryPage from './pages/LessonHistoryPage';
 import NotificationsPage from './pages/NotificationsPage';
+import CalendarPage from './pages/CalendarPage';
 import AppLayout from './layouts/AppLayout';
 import { I18nProvider } from './i18n/I18nContext';
 import { AdminRoute, ProtectedRoute, PublicOnlyRoute } from './components/RouteGuards';
@@ -38,6 +39,7 @@ function App() {
               <Route path="/lesson/:id" element={<LessonPage />} />
               <Route path="/me" element={<PersonalAreaRoute />} />
               <Route path="/rating" element={<RatingPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/token-history" element={<TokenHistoryPage />} />
               <Route path="/lesson-history" element={<LessonHistoryPage />} />
               <Route path="/messages" element={<NotificationsPage />} />

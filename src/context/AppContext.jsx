@@ -505,6 +505,12 @@ export function AppProvider({ children }) {
     });
   };
 
+  const getLessonCalendar = async ({ from, to, role, status } = {}) => {
+    return apiCall(async () => {
+      return apiRequest(`/api/lessons/calendar${toQueryString({ from, to, role, status })}`);
+    });
+  };
+
   const getLessonHistory = async (limit = 20, offset = 0) => {
     return apiCall(async () => {
       const payload = await apiRequest(`/api/lessons/history${toQueryString({ limit, offset })}`);
@@ -814,6 +820,7 @@ export function AppProvider({ children }) {
     getTutorProfile,
     getTutorAvailability,
     getUpcomingLessons,
+    getLessonCalendar,
     getLessonHistory,
     getLessonDetails,
     completeLesson,

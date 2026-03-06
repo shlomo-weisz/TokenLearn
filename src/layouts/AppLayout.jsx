@@ -65,6 +65,9 @@ export default function AppLayout() {
             <Link to="/rating" style={getNavLinkStyle('/rating')}>
               ⭐ {t('nav.rating')}
             </Link>
+            <Link to="/calendar" style={getNavLinkStyle('/calendar')}>
+              🗓️ {t('nav.calendar')}
+            </Link>
             <Link to="/token-history" style={getNavLinkStyle('/token-history')}>
               <TokenHistoryIcon /> {t('nav.tokenHistory')}
             </Link>

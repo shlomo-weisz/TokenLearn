@@ -11,6 +11,7 @@ export default function FindTutorPage() {
   const [searchName, setSearchName] = useState("");
   const [minRating, setMinRating] = useState("0");
   const [minLessons, setMinLessons] = useState("0");
+  const [taughtMeBeforeOnly, setTaughtMeBeforeOnly] = useState(false);
   const [selectedTutorForBooking, setSelectedTutorForBooking] = useState(null);
   const [selectedTutorForProfile, setSelectedTutorForProfile] = useState(null);
   const [tutors, setTutors] = useState([]);
@@ -46,6 +47,7 @@ export default function FindTutorPage() {
       const result = await searchTutors({
         course: courseQuery,
         name: searchName.trim() || undefined,
+        taughtMeBefore: taughtMeBeforeOnly || undefined,
         minRating: Number.isNaN(minRatingNumber) ? undefined : minRatingNumber,
         limit: 50
       });
@@ -60,7 +62,7 @@ export default function FindTutorPage() {
       isMounted = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCourse, minRating, searchName]);
+  }, [selectedCourse, minRating, searchName, taughtMeBeforeOnly]);
 
   const handleBook = () => {};
 
@@ -138,6 +140,22 @@ export default function FindTutorPage() {
             style={inputStyle}
           />
         </div>
+
+        <label style={checkboxCardStyle}>
+          <input
+            type="checkbox"
+            checked={taughtMeBeforeOnly}
+            onChange={(event) => setTaughtMeBeforeOnly(event.target.checked)}
+          />
+          <span>
+            <strong>{isHe ? "מורים שכבר לימדו אותי" : "Tutors Who Already Taught Me"}</strong>
+            <span style={checkboxHintStyle}>
+              {isHe
+                ? "הצגת מורים שכבר העבירו לך לפחות שיעור אחד שהושלם."
+                : "Show only tutors who have already completed at least one lesson with you."}
+            </span>
+          </span>
+        </label>
       </div>
 
       <div style={{ display: "grid", gap: 12 }}>
@@ -170,6 +188,11 @@ export default function FindTutorPage() {
                 <div style={{ color: "#475569", fontSize: 14 }}>
                   {isHe ? "קורסים" : "Courses"}: {(Array.isArray(t.courses) ? t.courses : []).join(", ")} • {isHe ? "דירוג" : "Rating"}: {t.rating} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
                 </div>
+                {t.taughtMeBefore && (
+                  <div style={repeatTutorBadgeStyle}>
+                    {isHe ? "כבר לימד/ה אותי" : "Already taught me"}
+                  </div>
+                )}
                 <div style={{ color: canBook ? "#166534" : "#b45309", fontSize: 13, fontWeight: 600 }}>
                   {canBook
                     ? (isHe ? `זמינות להוראה: ${availabilityCount} חלונות זמן` : `Availability: ${availabilityCount} time slots`)
@@ -266,4 +289,37 @@ const ghostBtn = {
   color: "#0f172a",
   fontWeight: 700,
   cursor: "pointer"
+};
+
+const checkboxCardStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 10,
+  padding: "12px 14px",
+  borderRadius: 12,
+  border: "1px solid #dbeafe",
+  background: "#f8fbff",
+  cursor: "pointer",
+  fontSize: 14
+};
+
+const checkboxHintStyle = {
+  display: "block",
+  marginTop: 4,
+  color: "#64748b",
+  fontSize: 12,
+  lineHeight: 1.5
+};
+
+const repeatTutorBadgeStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  width: "fit-content",
+  padding: "4px 10px",
+  borderRadius: 999,
+  background: "#dcfce7",
+  border: "1px solid #86efac",
+  color: "#166534",
+  fontSize: 12,
+  fontWeight: 800
 };
