@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../context/useApp";
 import HeaderTopBar from "../components/HeaderTopBar";
 import Card from "../components/Card";
@@ -138,19 +139,32 @@ export default function AdminPage() {
     return trimmed ? trimmed : null;
   };
 
-  const handleAdjustTokens = async (targetUserId) => {
-    const rawValue = tokenAdjustments[targetUserId];
+  const handleAdjustTokens = async (targetUser) => {
+    const rawValue = tokenAdjustments[targetUser.id];
     const amount = Number(rawValue);
     if (!Number.isFinite(amount)) {
       addNotification(isHe ? "יש להזין מספר תקין." : "Please enter a valid number.", "error");
       return;
     }
 
-    const result = await adjustUserTokens(targetUserId, amount);
+    if (amount < 0) {
+      const availableBalance = Number(targetUser.available ?? 0);
+      if ((availableBalance + amount) < 0) {
+        addNotification(
+          isHe
+            ? "אי אפשר להוריד יותר טוקנים מהיתרה הזמינה של המשתמש."
+            : "You cannot deduct more tokens than the user's available balance.",
+          "error"
+        );
+        return;
+      }
+    }
+
+    const result = await adjustUserTokens(targetUser.id, amount);
     if (result.success) {
       setTokenAdjustments((prev) => ({
         ...prev,
-        [targetUserId]: ""
+        [targetUser.id]: ""
       }));
       await refreshAdminData();
     }
@@ -327,7 +341,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div style={styles.tableShell}>
+            <SyncedTableShell>
               <table style={styles.table}>
                 <colgroup>
                   <col style={{ width: "8%" }} />
@@ -434,15 +448,20 @@ export default function AdminPage() {
                                 type="number"
                                 value={tokenAdjustments[u.id] ?? ''}
                                 onChange={(e) => setTokenAdjustments((prev) => ({ ...prev, [u.id]: e.target.value }))}
-                                placeholder={isHe ? 'Δ טוקנים' : 'Δ tokens'}
+                                placeholder={isHe ? '+50 / -20' : '+50 / -20'}
+                                step="1"
                                 style={styles.tokenInput}
+                                title={isHe ? 'הזן/י מספר חיובי להוספה או שלילי להורדה' : 'Enter a positive number to add or a negative number to deduct'}
                               />
                               <button
                                 style={styles.adjustBtn}
-                                onClick={() => handleAdjustTokens(u.id)}
+                                onClick={() => handleAdjustTokens(u)}
                               >
                                 {isHe ? 'עדכן' : 'Adjust'}
                               </button>
+                            </div>
+                            <div style={styles.adjustHint}>
+                              {isHe ? 'מספר חיובי מוסיף, מספר שלילי מוריד. לא ניתן לרדת מתחת ליתרה הזמינה.' : 'Positive adds, negative deducts. The available balance cannot go below zero.'}
                             </div>
                           </div>
                         </td>
@@ -457,13 +476,14 @@ export default function AdminPage() {
                   {isHe ? "לא נמצאו משתמשים בהתאם לסינון." : "No users found for this filter."}
                 </div>
               )}
-            </div>
+            </SyncedTableShell>
           </Card>
         )}
 
         {activeTab === "lessons" && (
           <Card style={styles.fullWidthCard} hoverable={false}>
-            <table style={styles.table}>
+            <SyncedTableShell>
+              <table style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>{isHe ? "תלמיד" : "Student"}</th>
@@ -484,7 +504,8 @@ export default function AdminPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </SyncedTableShell>
           </Card>
         )}
       </main>
@@ -619,6 +640,143 @@ function UserAvatar({ photoUrl, fullName, isHe }) {
   );
 }
 
+function SyncedTableShell({ children }) {
+  const tableShellRef = useRef(null);
+  const bottomScrollbarRef = useRef(null);
+  const bottomTrackRef = useRef(null);
+  const syncLockRef = useRef(false);
+  const [isScrollable, setIsScrollable] = useState(false);
+  const [dockStyle, setDockStyle] = useState({
+    left: 12,
+    width: 0,
+    visible: false
+  });
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(typeof document !== "undefined");
+  }, []);
+
+  useEffect(() => {
+    const tableShell = tableShellRef.current;
+    if (!tableShell) {
+      return undefined;
+    }
+
+    const syncMeasurements = () => {
+      const scrollWidth = tableShell.scrollWidth;
+      const clientWidth = tableShell.clientWidth;
+      const bottomScrollbar = bottomScrollbarRef.current;
+      const bottomTrack = bottomTrackRef.current;
+      if (bottomTrack) {
+        bottomTrack.style.width = `${scrollWidth}px`;
+      }
+      const canScroll = scrollWidth > clientWidth + 1;
+      setIsScrollable(canScroll);
+
+      const rect = tableShell.getBoundingClientRect();
+      const viewportPadding = 12;
+      const clampedLeft = Math.max(viewportPadding, rect.left);
+      const maxWidth = Math.max(0, window.innerWidth - (viewportPadding * 2));
+      const clampedWidth = Math.max(0, Math.min(rect.width, maxWidth, window.innerWidth - clampedLeft - viewportPadding));
+      const visibleInViewport = rect.bottom > 0 && rect.top < window.innerHeight;
+
+      setDockStyle({
+        left: clampedLeft,
+        width: clampedWidth,
+        visible: canScroll && visibleInViewport && clampedWidth > 0
+      });
+
+      if (bottomScrollbar && Math.abs(bottomScrollbar.scrollLeft - tableShell.scrollLeft) > 1) {
+        bottomScrollbar.scrollLeft = tableShell.scrollLeft;
+      }
+    };
+
+    syncMeasurements();
+    window.addEventListener("scroll", syncMeasurements, { passive: true });
+
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(syncMeasurements);
+
+    if (resizeObserver) {
+      resizeObserver.observe(tableShell);
+      Array.from(tableShell.children).forEach((child) => resizeObserver.observe(child));
+    } else {
+      window.addEventListener("resize", syncMeasurements);
+    }
+
+    return () => {
+      window.removeEventListener("scroll", syncMeasurements);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener("resize", syncMeasurements);
+      }
+    };
+  }, [children]);
+
+  useEffect(() => {
+    const tableShell = tableShellRef.current;
+    const bottomScrollbar = bottomScrollbarRef.current;
+    if (!tableShell || !bottomScrollbar || !isScrollable) {
+      return undefined;
+    }
+
+    const syncFromTable = () => {
+      if (syncLockRef.current) {
+        return;
+      }
+      syncLockRef.current = true;
+      bottomScrollbar.scrollLeft = tableShell.scrollLeft;
+      window.requestAnimationFrame(() => {
+        syncLockRef.current = false;
+      });
+    };
+
+    const syncFromBottom = () => {
+      if (syncLockRef.current) {
+        return;
+      }
+      syncLockRef.current = true;
+      tableShell.scrollLeft = bottomScrollbar.scrollLeft;
+      window.requestAnimationFrame(() => {
+        syncLockRef.current = false;
+      });
+    };
+
+    bottomScrollbar.scrollLeft = tableShell.scrollLeft;
+    tableShell.addEventListener("scroll", syncFromTable, { passive: true });
+    bottomScrollbar.addEventListener("scroll", syncFromBottom, { passive: true });
+
+    return () => {
+      tableShell.removeEventListener("scroll", syncFromTable);
+      bottomScrollbar.removeEventListener("scroll", syncFromBottom);
+    };
+  }, [isScrollable, children]);
+
+  return (
+    <div style={styles.tableShellWrap}>
+      <div ref={tableShellRef} style={styles.tableShell}>
+        {children}
+      </div>
+      {portalReady && isScrollable && dockStyle.visible && createPortal(
+        <div
+          ref={bottomScrollbarRef}
+          style={{
+            ...styles.fixedScrollDock,
+            left: dockStyle.left,
+            width: dockStyle.width
+          }}
+        >
+          <div ref={bottomTrackRef} style={styles.stickyScrollTrack} />
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 const styles = {
   tabs: { display: "flex", gap: 8, marginBottom: 16 },
   tab: { padding: "10px 16px", borderRadius: 8, border: "1px solid #e2e8f0", cursor: "pointer", background: "white" },
@@ -657,11 +815,30 @@ const styles = {
     marginInlineStart: 'auto'
   },
   select: { height: 40, borderRadius: 10, border: "1px solid #e2e8f0", padding: "0 10px", background: 'white' },
+  tableShellWrap: {
+    display: 'grid',
+    gap: 8
+  },
   tableShell: {
     border: '1px solid #e2e8f0',
     borderRadius: 12,
     overflowX: 'auto',
     background: '#fff'
+  },
+  fixedScrollDock: {
+    position: 'fixed',
+    bottom: 12,
+    zIndex: 20,
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    height: 20,
+    borderRadius: 999,
+    border: '1px solid #cbd5e1',
+    background: 'rgba(248, 250, 252, 0.96)',
+    boxShadow: '0 8px 20px rgba(15, 23, 42, 0.08)'
+  },
+  stickyScrollTrack: {
+    height: 1
   },
   table: { width: "100%", minWidth: 1800, borderCollapse: "collapse", tableLayout: "fixed" },
   th: {
@@ -807,12 +984,18 @@ const styles = {
   metricValue: { fontSize: 24, fontWeight: 800, color: '#0f172a' },
   actionsWrap: { display: 'grid', gap: 8, minWidth: 0, justifyItems: 'start' },
   teacherActions: { display: 'flex', gap: 6, flexWrap: 'wrap' },
-  adjustRow: { display: 'flex', gap: 6 },
+  adjustRow: { display: 'flex', gap: 6, alignItems: 'center' },
+  adjustHint: {
+    fontSize: 12,
+    color: '#64748b',
+    maxWidth: 220,
+    lineHeight: 1.4
+  },
   blockBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #dc2626", background: "#dc2626", color: "white", whiteSpace: 'nowrap' },
   unblockBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #059669", background: "#059669", color: "white", whiteSpace: 'nowrap' },
   editBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #0284c7", background: "#0284c7", color: "white", whiteSpace: 'nowrap' },
   deleteBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d", color: "white", whiteSpace: 'nowrap' },
-  tokenInput: { width: 96, borderRadius: 8, border: '1px solid #cbd5e1', padding: '6px 8px' },
+  tokenInput: { width: 110, borderRadius: 8, border: '1px solid #cbd5e1', padding: '6px 8px' },
   adjustBtn: { padding: '6px 10px', borderRadius: 8, border: '1px solid #0ea5e9', background: '#0ea5e9', color: 'white', whiteSpace: 'nowrap' },
   cancelBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #f59e0b", background: "#f59e0b", color: "white" },
   emptyUsersState: {
