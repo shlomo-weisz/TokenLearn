@@ -28,12 +28,12 @@ export const normalizeCourse = (course) => {
     };
   }
 
-  const id = Number.isInteger(course.id) ? course.id : null;
+  const id = Number.isInteger(course.id) ? course.id : (Number.isInteger(course.courseId) ? course.courseId : null);
   const courseNumber = normalizeText(course.courseNumber);
-  const nameHe = normalizeText(course.nameHe ?? course.hebrewName);
-  const nameEn = normalizeText(course.nameEn ?? course.englishName);
-  const name = normalizeText(course.name ?? course.label);
-  const label = normalizeText(course.label);
+  const nameHe = normalizeText(course.nameHe ?? course.hebrewName ?? course.courseNameHe);
+  const nameEn = normalizeText(course.nameEn ?? course.englishName ?? course.courseNameEn);
+  const name = normalizeText(course.name ?? course.courseName ?? course.label ?? course.courseLabel);
+  const label = normalizeText(course.label ?? course.courseLabel);
 
   return {
     id,
