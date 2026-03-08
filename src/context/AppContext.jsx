@@ -236,6 +236,7 @@ export function AppProvider({ children }) {
       const payload = await apiRequest(`/api/lesson-requests/${requestId}/approve`, {
         method: 'POST'
       });
+      await getTokenBalance();
       addNotification(getUiMessage('lessonRequestApproved'), 'success');
       return payload;
     });
@@ -247,6 +248,7 @@ export function AppProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ rejectionMessage: reason })
       });
+      await getTokenBalance();
       addNotification(getUiMessage('lessonRequestRejected'), 'info');
       return payload;
     });
@@ -257,6 +259,7 @@ export function AppProvider({ children }) {
       const payload = await apiRequest(`/api/lesson-requests/${requestId}`, {
         method: 'DELETE'
       });
+      await getTokenBalance();
       addNotification(getUiMessage('requestCancelled'), 'info');
       return payload;
     });
@@ -558,6 +561,7 @@ export function AppProvider({ children }) {
   const getLessonRequestsAsStudent = async (status) => {
     return apiCall(async () => {
       const payload = await apiRequest(`/api/lesson-requests/student${toQueryString({ status })}`);
+      await getTokenBalance();
       return firstArray(payload, ['requests', 'items']);
     });
   };
@@ -565,6 +569,7 @@ export function AppProvider({ children }) {
   const getLessonRequestsAsTeacher = async (status) => {
     return apiCall(async () => {
       const payload = await apiRequest(`/api/lesson-requests/teacher${toQueryString({ status })}`);
+      await getTokenBalance();
       return firstArray(payload, ['requests', 'items']);
     });
   };

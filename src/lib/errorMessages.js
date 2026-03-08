@@ -47,6 +47,10 @@ const CODE_MESSAGES = {
     he: "לא ניתן לבצע את הפעולה במצב הנוכחי.",
     en: "Action is not allowed in the current state."
   },
+  REQUEST_EXPIRED: {
+    he: "בקשת השיעור פג תוקף והטוקנים שוחררו בחזרה ליתרה הזמינה.",
+    en: "The lesson request expired and the reserved tokens were released back to your available balance."
+  },
   INVALID_TIME: {
     he: "פורמט הזמן אינו תקין.",
     en: "Time format is invalid."
