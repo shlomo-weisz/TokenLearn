@@ -35,6 +35,7 @@ export default function LessonPage() {
   const [isSendingCoordination, setIsSendingCoordination] = useState(false);
   const [coordinationDraft, setCoordinationDraft] = useState("");
   const [coordinationMessages, setCoordinationMessages] = useState([]);
+  const [now, setNow] = useState(() => new Date());
 
   const [lesson, setLesson] = useState({
     id: lessonId || 1,
@@ -117,10 +118,21 @@ export default function LessonPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const isStudent = lesson.role === "student";
   const otherPersonName = (isStudent ? lesson.tutorName : lesson.studentName) || (isHe ? "משתמש/ת" : "User");
   const otherPersonRole = isStudent ? (isHe ? "מורה" : "Tutor") : (isHe ? "תלמיד/ה" : "Student");
   const lessonCourseLabel = getCourseDisplayNameFromSource(lesson, language);
+  const lessonStartDate = lesson.startTime ? new Date(lesson.startTime) : new Date(lesson.dateTime);
+  const lessonEndDate = lesson.endTime ? new Date(lesson.endTime) : null;
+  const hasValidStartTime = lessonStartDate instanceof Date && !Number.isNaN(lessonStartDate.getTime());
+  const hasValidEndTime = lessonEndDate instanceof Date && !Number.isNaN(lessonEndDate.getTime());
+  const canCompleteScheduledLesson = lesson.status === "scheduled" && hasValidEndTime && lessonEndDate <= now;
+  const canCancelScheduledLesson = lesson.status === "scheduled" && hasValidStartTime && lessonStartDate > now;
 
   const formatDateTime = (dateStr) => {
     const date = new Date(dateStr);
@@ -138,24 +150,16 @@ export default function LessonPage() {
     });
   };
 
-  const handleStartLesson = () => {
-    setLesson((prev) => ({ ...prev, status: "in-progress" }));
-    addNotification(isHe ? "השיעור התחיל!" : "Lesson started!", "success");
-  };
-
   const handleCompleteLesson = async () => {
     setIsSubmitting(true);
-    const result = await completeLesson(lesson.id, {
-      role: lesson.role,
-      tokenCost: lesson.tokenCost
-    });
+    const result = await completeLesson(lesson.id);
     setIsSubmitting(false);
 
     if (result.success) {
       setLesson((prev) => ({
         ...prev,
         status: "completed",
-        completedAt: new Date().toISOString()
+        completedAt: result.data?.completedAt || new Date().toISOString()
       }));
       if (isStudent) {
         setShowRatingForm(true);
@@ -372,23 +376,24 @@ export default function LessonPage() {
 
           {lesson.status === "scheduled" && (
             <div style={styles.actions}>
-              <Button onClick={handleStartLesson}>
-                🎬 {isHe ? "התחלת שיעור" : "Start Lesson"}
-              </Button>
-              <button
-                onClick={() => setShowCancelModal(true)}
-                style={styles.dangerBtn}
-              >
-                {isHe ? "ביטול שיעור" : "Cancel Lesson"}
-              </button>
-            </div>
-          )}
+              {canCompleteScheduledLesson ? (
+                <Button onClick={handleCompleteLesson} disabled={isSubmitting}>
+                  {isSubmitting ? (isHe ? "מסיים/ת..." : "Completing...") : (isHe ? "✓ סיום שיעור" : "✓ Complete Lesson")}
+                </Button>
+              ) : (
+                <div style={styles.scheduledHint}>
+                  {isHe ? "סיום שיעור יתאפשר אוטומטית או ידנית אחרי שעת הסיום." : "Lesson completion becomes available automatically or manually after the lesson end time."}
+                </div>
+              )}
 
-          {lesson.status === "in-progress" && (
-            <div style={styles.actions}>
-              <Button onClick={handleCompleteLesson} disabled={isSubmitting}>
-                {isSubmitting ? (isHe ? "מסיים/ת..." : "Completing...") : (isHe ? "✓ סיום שיעור" : "✓ Complete Lesson")}
-              </Button>
+              {canCancelScheduledLesson && (
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  style={styles.dangerBtn}
+                >
+                  {isHe ? "ביטול שיעור" : "Cancel Lesson"}
+                </button>
+              )}
             </div>
           )}
 
@@ -594,9 +599,16 @@ const styles = {
   },
   actions: {
     display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 12,
     paddingTop: 8,
     borderTop: "1px solid #e2e8f0"
+  },
+  scheduledHint: {
+    color: "#64748b",
+    fontSize: 14,
+    lineHeight: 1.6
   },
   ratingSection: {
     padding: 20,
