@@ -177,9 +177,7 @@ export default function HomePage() {
           onApprove={async (requestId) => {
             const result = await approveLessonRequest(requestId);
             if (result.success) {
-              setRequests(prev => prev.map((request) => (
-                request.id === requestId ? { ...request, status: 'approved' } : request
-              )));
+              setRequests(prev => prev.filter((request) => request.id !== requestId));
               addNotification(getUiMessage("lessonApproved", language), "success");
             }
           }}
@@ -221,9 +219,7 @@ export default function HomePage() {
                     }
                     const result = await rejectLessonRequest(selectedRequestId, rejectionMessage);
                     if (result.success) {
-                      setRequests(prev => prev.map((request) => (
-                        request.id === selectedRequestId ? { ...request, status: 'rejected', rejectionReason: rejectionMessage } : request
-                      )));
+                      setRequests(prev => prev.filter((request) => request.id !== selectedRequestId));
                       addNotification(isHe ? "הבקשה נדחתה" : "Lesson rejected", "info");
                       setRejectModalOpen(false);
                     }

@@ -34,19 +34,34 @@ export default function LessonRequestsPage() {
   const [selectedRequestForCancel, setSelectedRequestForCancel] = useState(null);
   const [timers, setTimers] = useState({});
 
+  const fetchRequests = async () => {
+    const [studentResult, teacherResult] = await Promise.all([
+      getLessonRequestsAsStudent(),
+      getLessonRequestsAsTeacher()
+    ]);
+
+    return {
+      studentRequests: studentResult.success ? (studentResult.data || []) : [],
+      teacherRequests: teacherResult.success ? (teacherResult.data || []) : []
+    };
+  };
+
+  const refreshRequests = async () => {
+    const next = await fetchRequests();
+    setRequestsAsStudent(next.studentRequests);
+    setRequestsAsTeacher(next.teacherRequests);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     const loadRequests = async () => {
-      const [studentResult, teacherResult] = await Promise.all([
-        getLessonRequestsAsStudent(),
-        getLessonRequestsAsTeacher()
-      ]);
+      const next = await fetchRequests();
 
       if (!isMounted) return;
 
-      setRequestsAsStudent(studentResult.success ? (studentResult.data || []) : []);
-      setRequestsAsTeacher(teacherResult.success ? (teacherResult.data || []) : []);
+      setRequestsAsStudent(next.studentRequests);
+      setRequestsAsTeacher(next.teacherRequests);
     };
 
     loadRequests();
@@ -132,9 +147,7 @@ export default function LessonRequestsPage() {
 
     const result = await approveLessonRequest(requestId);
     if (result.success) {
-      setRequestsAsTeacher((prev) => prev.map((request) => (
-        request.id === requestId ? { ...request, status: "approved" } : request
-      )));
+      await refreshRequests();
     }
   };
 
@@ -152,11 +165,7 @@ export default function LessonRequestsPage() {
 
     const result = await rejectLessonRequest(selectedRequestForRejection.id, rejectionMessage);
     if (result.success) {
-      setRequestsAsTeacher((prev) => prev.map((request) => (
-        request.id === selectedRequestForRejection.id
-          ? { ...request, status: "rejected", rejectionReason: rejectionMessage }
-          : request
-      )));
+      await refreshRequests();
     }
 
     setRejectModalOpen(false);
@@ -172,11 +181,7 @@ export default function LessonRequestsPage() {
   const handleCancel = async () => {
     const result = await cancelLessonRequest(selectedRequestForCancel.id);
     if (result.success) {
-      setRequestsAsStudent((prev) => prev.map((request) => (
-        request.id === selectedRequestForCancel.id
-          ? { ...request, status: "cancelled" }
-          : request
-      )));
+      await refreshRequests();
     }
     setCancelModalOpen(false);
     setSelectedRequestForCancel(null);

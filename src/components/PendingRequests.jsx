@@ -85,7 +85,7 @@ export default function PendingRequests({ requests, onApprove, onReject }) {
 
   const activeRequests = requests.filter((r) => {
     const isPending = r.status === "Pending" || r.status === "pending";
-    if (!isPending) return true;
+    if (!isPending) return false;
     const timer = timers[r.id];
     return !timer?.expired;
   });
