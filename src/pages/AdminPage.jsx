@@ -5,6 +5,7 @@ import HeaderTopBar from "../components/HeaderTopBar";
 import Card from "../components/Card";
 import Input from "../components/Input";
 import LoadingSpinner from "../components/LoadingSpinner";
+import TokenHistoryList from "../components/TokenHistoryList";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayName, getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl } from "../lib/validation";
@@ -23,6 +24,7 @@ export default function AdminPage() {
     getAdminLessons,
     getAdminRatings,
     adjustUserTokens,
+    getAdminUserTokenHistory,
     updateAdminUser,
     updateAdminRating,
     deleteAdminUser,
@@ -37,11 +39,12 @@ export default function AdminPage() {
   const [statistics, setStatistics] = useState(null);
   const [tokenAdjustments, setTokenAdjustments] = useState({});
   const [editingUser, setEditingUser] = useState(null);
+  const [tokenHistoryViewer, setTokenHistoryViewer] = useState(null);
   const [editingRating, setEditingRating] = useState(null);
   const [activeTab, setActiveTab] = useState("users");
   const editDialogRef = useRef(null);
   const portalTarget = typeof document === "undefined" ? null : document.body;
-  const isAnyDialogOpen = editingUser !== null;
+  const isAnyDialogOpen = editingUser !== null || tokenHistoryViewer !== null;
 
   const applyAdminSnapshot = (dashboardResult, usersResult, statisticsResult, lessonsResult, ratingsResult) => {
     if (dashboardResult.success) setDashboard(dashboardResult.data);
@@ -154,6 +157,10 @@ export default function AdminPage() {
 
   const closeEditDialog = () => {
     setEditingUser(null);
+  };
+
+  const closeTokenHistoryViewer = () => {
+    setTokenHistoryViewer(null);
   };
 
   const openRatingEditor = (rating) => {
@@ -292,6 +299,21 @@ export default function AdminPage() {
     if (result.success) {
       await refreshAdminData();
     }
+  };
+
+  const handleOpenTokenHistory = async (targetUser) => {
+    const result = await getAdminUserTokenHistory(targetUser.id, 50, 0);
+    if (!result.success) {
+      return;
+    }
+
+    setTokenHistoryViewer({
+      user: targetUser,
+      fullName: result.data?.fullName || fullNameOf(targetUser) || (isHe ? "ללא שם" : "No name"),
+      email: result.data?.email || targetUser.email || "",
+      totalCount: Number(result.data?.totalCount ?? 0),
+      transactions: result.data?.transactions || []
+    });
   };
 
   const handleSaveUser = async () => {
@@ -590,6 +612,9 @@ export default function AdminPage() {
                               </button>
                               <button style={styles.editBtn} onClick={() => openEditDialog(u)}>
                                 {isHe ? "עריכה" : "Edit"}
+                              </button>
+                              <button style={styles.historyBtn} onClick={() => handleOpenTokenHistory(u)}>
+                                {isHe ? "היסטוריית טוקנים" : "Token History"}
                               </button>
                               <button style={styles.deleteBtn} onClick={() => handleDeleteUser(u)}>
                                 {isHe ? "מחיקה" : "Delete"}
@@ -923,6 +948,66 @@ export default function AdminPage() {
               </button>
               <button style={styles.saveBtn} onClick={handleSaveUser}>
                 {isHe ? "שמירה" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        portalTarget
+      )}
+
+      {tokenHistoryViewer && portalTarget && createPortal(
+        <div style={styles.modalBackdrop} onClick={closeTokenHistoryViewer}>
+          <div style={styles.historyModalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.historyModalHeader}>
+              <div>
+                <h3 style={{ margin: 0 }}>
+                  {isHe ? "היסטוריית טוקנים" : "Token History"} #{tokenHistoryViewer.user.id}
+                </h3>
+                <div style={styles.historyModalSubheader}>
+                  {tokenHistoryViewer.fullName} {tokenHistoryViewer.email ? `• ${tokenHistoryViewer.email}` : ""}
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.historySummaryGrid}>
+              <div style={styles.historySummaryCard}>
+                <span style={styles.historySummaryLabel}>{isHe ? "סה״כ יתרה" : "Total balance"}</span>
+                <strong style={styles.historySummaryValue}>{tokenHistoryViewer.user.tokenBalance ?? 0} TOK</strong>
+              </div>
+              <div style={styles.historySummaryCard}>
+                <span style={styles.historySummaryLabel}>{isHe ? "זמין" : "Available"}</span>
+                <strong style={styles.historySummaryValue}>{tokenHistoryViewer.user.available ?? 0} TOK</strong>
+              </div>
+              <div style={styles.historySummaryCard}>
+                <span style={styles.historySummaryLabel}>{isHe ? "נעול" : "Locked"}</span>
+                <strong style={styles.historySummaryValue}>{tokenHistoryViewer.user.locked ?? 0} TOK</strong>
+              </div>
+              <div style={styles.historySummaryCard}>
+                <span style={styles.historySummaryLabel}>{isHe ? "תנועות" : "Transactions"}</span>
+                <strong style={styles.historySummaryValue}>
+                  {tokenHistoryViewer.transactions.length}
+                  {tokenHistoryViewer.totalCount > tokenHistoryViewer.transactions.length ? ` / ${tokenHistoryViewer.totalCount}` : ""}
+                </strong>
+              </div>
+            </div>
+
+            {tokenHistoryViewer.totalCount > tokenHistoryViewer.transactions.length && (
+              <div style={styles.historySummaryNote}>
+                {isHe
+                  ? `מוצגות ${tokenHistoryViewer.transactions.length} התנועות האחרונות מתוך ${tokenHistoryViewer.totalCount}.`
+                  : `Showing the latest ${tokenHistoryViewer.transactions.length} transactions out of ${tokenHistoryViewer.totalCount}.`}
+              </div>
+            )}
+
+            <TokenHistoryList
+              transactions={tokenHistoryViewer.transactions}
+              showRawReason
+              emptyMessage={isHe ? "למשתמש הזה אין עדיין תנועות טוקנים." : "This user has no token transactions yet."}
+            />
+
+            <div style={styles.modalActions}>
+              <button style={styles.cancelOutlineBtn} onClick={closeTokenHistoryViewer}>
+                {isHe ? "סגירה" : "Close"}
               </button>
             </div>
           </div>
@@ -1324,6 +1409,7 @@ const styles = {
   deleteBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d", color: "white", whiteSpace: 'nowrap' },
   tokenInput: { width: 110, borderRadius: 8, border: '1px solid #cbd5e1', padding: '6px 8px' },
   adjustBtn: { padding: '6px 10px', borderRadius: 8, border: '1px solid #0ea5e9', background: '#0ea5e9', color: 'white', whiteSpace: 'nowrap' },
+  historyBtn: { padding: "6px 10px", borderRadius: 8, border: "1px solid #7c3aed", background: "#7c3aed", color: "white", whiteSpace: 'nowrap' },
   lessonTimeCell: { display: 'grid', gap: 4 },
   lessonTimeHint: { fontSize: 12, color: '#64748b' },
   ratingBadge: {
@@ -1447,6 +1533,61 @@ const styles = {
     boxShadow: '0 20px 40px rgba(15, 23, 42, 0.24)',
     display: 'grid',
     gap: 12
+  },
+  historyModalCard: {
+    width: 'min(980px, calc(100vw - 24px))',
+    maxHeight: 'calc(100vh - 32px)',
+    overflowY: 'auto',
+    borderRadius: 14,
+    border: '1px solid #dbeafe',
+    background: 'white',
+    padding: 16,
+    boxShadow: '0 20px 40px rgba(15, 23, 42, 0.24)',
+    display: 'grid',
+    gap: 14
+  },
+  historyModalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'start',
+    gap: 12
+  },
+  historyModalSubheader: {
+    marginTop: 4,
+    color: '#64748b',
+    fontSize: 14,
+    overflowWrap: 'anywhere'
+  },
+  historySummaryGrid: {
+    display: 'grid',
+    gap: 10,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))'
+  },
+  historySummaryCard: {
+    display: 'grid',
+    gap: 6,
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1px solid #dbeafe',
+    background: '#f8fbff'
+  },
+  historySummaryLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: 700,
+    textTransform: 'uppercase'
+  },
+  historySummaryValue: {
+    fontSize: 18,
+    color: '#0f172a'
+  },
+  historySummaryNote: {
+    padding: '10px 12px',
+    borderRadius: 12,
+    background: '#fff7ed',
+    border: '1px solid #fed7aa',
+    color: '#9a3412',
+    fontSize: 13
   },
   modalFormGrid: {
     display: 'grid',

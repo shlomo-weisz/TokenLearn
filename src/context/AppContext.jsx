@@ -681,6 +681,12 @@ export function AppProvider({ children }) {
     });
   };
 
+  const getAdminUserTokenHistory = async (userId, limit = 50, offset = 0) => {
+    return apiCall(async () => {
+      return apiRequest(`/api/admin/users/${userId}/tokens/history${toQueryString({ limit, offset })}`);
+    });
+  };
+
   const updateAdminUser = async (userId, userData) => {
     return apiCall(async () => {
       return apiRequest(`/api/admin/users/${userId}`, {
@@ -882,6 +888,7 @@ export function AppProvider({ children }) {
     getAdminLessons,
     getAdminRatings,
     adjustUserTokens,
+    getAdminUserTokenHistory,
     updateAdminUser,
     updateAdminRating,
     deleteAdminUser,
