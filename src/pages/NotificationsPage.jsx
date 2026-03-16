@@ -48,6 +48,14 @@ export default function NotificationsPage() {
   const [replyDraft, setReplyDraft] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
 
+  const applyLocalReadState = (notificationId) => {
+    setItems((prev) => unreadOnly
+      ? prev.filter((item) => item.id !== notificationId)
+      : prev.map((item) => (
+        item.id === notificationId ? { ...item, isRead: true } : item
+      )));
+  };
+
   const loadNotifications = async (onlyUnread = unreadOnly) => {
     setPageLoading(true);
     const result = await getNotifications({
@@ -135,11 +143,7 @@ export default function NotificationsPage() {
       return;
     }
 
-    setItems((prev) => unreadOnly
-      ? prev.filter((item) => item.id !== notificationId)
-      : prev.map((item) => (
-        item.id === notificationId ? { ...item, isRead: true } : item
-      )));
+    applyLocalReadState(notificationId);
   };
 
   const handleMarkAllRead = async () => {
@@ -151,13 +155,14 @@ export default function NotificationsPage() {
     setItems((prev) => unreadOnly ? [] : prev.map((item) => ({ ...item, isRead: true })));
   };
 
-  const handleOpen = async (item) => {
-    if (!item.isRead) {
-      await handleMarkRead(item.id);
-    }
-
+  const handleOpen = (item) => {
     if (item.actionPath) {
       navigate(item.actionPath);
+    }
+
+    if (!item.isRead) {
+      applyLocalReadState(item.id);
+      void markNotificationsRead([item.id]);
     }
   };
 
@@ -590,7 +595,9 @@ const styles = {
   actions: {
     display: 'flex',
     gap: 10,
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    position: 'relative',
+    zIndex: 1
   },
   composeWrap: {
     display: 'grid',
