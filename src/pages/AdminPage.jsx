@@ -9,10 +9,12 @@ import TokenHistoryList from "../components/TokenHistoryList";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayName, getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl, normalizePhotoUrl } from "../lib/validation";
+import { useResponsiveLayout } from "../lib/responsive";
 
 export default function AdminPage() {
   const { language } = useI18n();
   const isHe = language === "he";
+  const { isMobile } = useResponsiveLayout();
   const {
     user,
     loading,
@@ -461,20 +463,20 @@ export default function AdminPage() {
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
       {loading && <LoadingSpinner fullScreen />}
       <HeaderTopBar tutorRating={user.tutorRating} />
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: 16 }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? 12 : 16 }}>
         <h1 style={{ marginTop: 0 }}>{isHe ? "לוח ניהול" : "Admin Dashboard"}</h1>
 
-        <div style={styles.tabs}>
-          <button onClick={() => setActiveTab("overview")} style={{ ...styles.tab, ...(activeTab === "overview" ? styles.activeTab : {}) }}>
+        <div style={{ ...styles.tabs, flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
+          <button onClick={() => setActiveTab("overview")} style={{ ...styles.tab, width: isMobile ? '100%' : 'auto', ...(activeTab === "overview" ? styles.activeTab : {}) }}>
             {isHe ? "סקירה" : "Overview"}
           </button>
-          <button onClick={() => setActiveTab("users")} style={{ ...styles.tab, ...(activeTab === "users" ? styles.activeTab : {}) }}>
+          <button onClick={() => setActiveTab("users")} style={{ ...styles.tab, width: isMobile ? '100%' : 'auto', ...(activeTab === "users" ? styles.activeTab : {}) }}>
             {isHe ? "ניהול משתמשים" : "Users Management"}
           </button>
-          <button onClick={() => setActiveTab("lessons")} style={{ ...styles.tab, ...(activeTab === "lessons" ? styles.activeTab : {}) }}>
+          <button onClick={() => setActiveTab("lessons")} style={{ ...styles.tab, width: isMobile ? '100%' : 'auto', ...(activeTab === "lessons" ? styles.activeTab : {}) }}>
             {isHe ? "ניהול שיעורים" : "Lessons Management"}
           </button>
-          <button onClick={() => setActiveTab("ratings")} style={{ ...styles.tab, ...(activeTab === "ratings" ? styles.activeTab : {}) }}>
+          <button onClick={() => setActiveTab("ratings")} style={{ ...styles.tab, width: isMobile ? '100%' : 'auto', ...(activeTab === "ratings" ? styles.activeTab : {}) }}>
             {isHe ? "ניהול דירוגים" : "Ratings Management"}
           </button>
         </div>
@@ -495,8 +497,8 @@ export default function AdminPage() {
 
         {activeTab === "users" && (
           <Card style={styles.fullWidthCard} hoverable={false}>
-            <div style={styles.usersToolbar}>
-              <div style={styles.searchWrap}>
+            <div style={{ ...styles.usersToolbar, alignItems: isMobile ? 'stretch' : 'end' }}>
+              <div style={{ ...styles.searchWrap, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
                 <Input
                   label={isHe ? "חיפוש" : "Search"}
                   placeholder={isHe ? "חיפוש לפי שם, אימייל או טלפון" : "Search by name, email or phone"}
@@ -505,17 +507,17 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div style={styles.filterWrap}>
+              <div style={{ ...styles.filterWrap, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
                 <label style={styles.filterLabel}>{isHe ? "סוג משתמש" : "User Type"}</label>
                 <div style={styles.allRolesBadge}>{isHe ? "כל משתמש הוא גם תלמיד/ה וגם מורה" : "Each user is both Student and Tutor"}</div>
               </div>
 
-              <div style={styles.usersCountPill}>
+              <div style={{ ...styles.usersCountPill, width: isMobile ? '100%' : 'auto', marginInlineStart: isMobile ? 0 : 'auto' }}>
                 {isHe ? `סה״כ: ${filteredUsers.length}` : `Total: ${filteredUsers.length}`}
               </div>
             </div>
 
-            <SyncedTableShell>
+            <SyncedTableShell isMobile={isMobile}>
               <table style={styles.table}>
                 <colgroup>
                   <col style={{ width: "8%" }} />
@@ -659,7 +661,7 @@ export default function AdminPage() {
 
         {activeTab === "lessons" && (
           <Card style={styles.fullWidthCard} hoverable={false}>
-            <SyncedTableShell>
+            <SyncedTableShell isMobile={isMobile}>
               <table style={styles.table}>
               <thead>
                 <tr>
@@ -702,8 +704,8 @@ export default function AdminPage() {
 
         {activeTab === "ratings" && (
           <Card style={styles.fullWidthCard} hoverable={false}>
-            <div style={styles.usersToolbar}>
-              <div style={styles.searchWrap}>
+            <div style={{ ...styles.usersToolbar, alignItems: isMobile ? 'stretch' : 'end' }}>
+              <div style={{ ...styles.searchWrap, minWidth: 0, width: isMobile ? '100%' : 'auto' }}>
                 <Input
                   label={isHe ? "חיפוש דירוגים" : "Search ratings"}
                   placeholder={isHe ? "חיפוש לפי מדרג/ת, מקבל/ת, קורס או טקסט" : "Search by rater, ratee, course or comment"}
@@ -711,12 +713,12 @@ export default function AdminPage() {
                   onChange={setRatingSearchQuery}
                 />
               </div>
-              <div style={styles.usersCountPill}>
+              <div style={{ ...styles.usersCountPill, width: isMobile ? '100%' : 'auto', marginInlineStart: isMobile ? 0 : 'auto' }}>
                 {isHe ? `סה״כ דירוגים: ${filteredRatings.length}` : `Total ratings: ${filteredRatings.length}`}
               </div>
             </div>
 
-            <SyncedTableShell>
+            <SyncedTableShell isMobile={isMobile}>
               <table style={{ ...styles.table, minWidth: 1500 }}>
                 <colgroup>
                   <col style={{ width: "8%" }} />
@@ -832,11 +834,11 @@ export default function AdminPage() {
                                   />
                                 </label>
 
-                                <div style={styles.modalActions}>
-                                  <button style={styles.cancelOutlineBtn} onClick={closeRatingEditor}>
+                                <div style={{ ...styles.modalActions, flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+                                  <button style={{ ...styles.cancelOutlineBtn, width: isMobile ? '100%' : 'auto' }} onClick={closeRatingEditor}>
                                     {isHe ? "ביטול" : "Cancel"}
                                   </button>
-                                  <button style={styles.saveBtn} onClick={handleSaveRating}>
+                                  <button style={{ ...styles.saveBtn, width: isMobile ? '100%' : 'auto' }} onClick={handleSaveRating}>
                                     {isHe ? "שמירת דירוג" : "Save Rating"}
                                   </button>
                                 </div>
@@ -942,11 +944,11 @@ export default function AdminPage() {
               </label>
             </div>
 
-            <div style={styles.modalActions}>
-              <button style={styles.cancelOutlineBtn} onClick={closeEditDialog}>
+            <div style={{ ...styles.modalActions, flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+              <button style={{ ...styles.cancelOutlineBtn, width: isMobile ? '100%' : 'auto' }} onClick={closeEditDialog}>
                 {isHe ? "ביטול" : "Cancel"}
               </button>
-              <button style={styles.saveBtn} onClick={handleSaveUser}>
+              <button style={{ ...styles.saveBtn, width: isMobile ? '100%' : 'auto' }} onClick={handleSaveUser}>
                 {isHe ? "שמירה" : "Save"}
               </button>
             </div>
@@ -958,7 +960,7 @@ export default function AdminPage() {
       {tokenHistoryViewer && portalTarget && createPortal(
         <div style={styles.modalBackdrop} onClick={closeTokenHistoryViewer}>
           <div style={styles.historyModalCard} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.historyModalHeader}>
+            <div style={{ ...styles.historyModalHeader, flexDirection: isMobile ? 'column' : 'row' }}>
               <div>
                 <h3 style={{ margin: 0 }}>
                   {isHe ? "היסטוריית טוקנים" : "Token History"} #{tokenHistoryViewer.user.id}
@@ -1005,8 +1007,8 @@ export default function AdminPage() {
               emptyMessage={isHe ? "למשתמש הזה אין עדיין תנועות טוקנים." : "This user has no token transactions yet."}
             />
 
-            <div style={styles.modalActions}>
-              <button style={styles.cancelOutlineBtn} onClick={closeTokenHistoryViewer}>
+            <div style={{ ...styles.modalActions, flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+              <button style={{ ...styles.cancelOutlineBtn, width: isMobile ? '100%' : 'auto' }} onClick={closeTokenHistoryViewer}>
                 {isHe ? "סגירה" : "Close"}
               </button>
             </div>
@@ -1025,15 +1027,11 @@ const initialsFromName = (fullName) => {
 };
 
 function UserAvatar({ photoUrl, fullName, isHe }) {
-  const [failed, setFailed] = useState(false);
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState("");
   const safePhotoUrl = normalizePhotoUrl(photoUrl);
 
-  useEffect(() => {
-    setFailed(false);
-  }, [safePhotoUrl]);
-
   const alt = fullName || (isHe ? "תמונת פרופיל" : "Profile photo");
-  const showImage = Boolean(safePhotoUrl) && !failed;
+  const showImage = Boolean(safePhotoUrl) && failedPhotoUrl !== safePhotoUrl;
 
   return (
     <div style={styles.avatarFrame}>
@@ -1044,7 +1042,7 @@ function UserAvatar({ photoUrl, fullName, isHe }) {
           style={styles.avatarThumb}
           loading="lazy"
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => setFailedPhotoUrl(safePhotoUrl)}
         />
       ) : (
         <div style={styles.avatarFallback}>{initialsFromName(fullName)}</div>
@@ -1053,7 +1051,8 @@ function UserAvatar({ photoUrl, fullName, isHe }) {
   );
 }
 
-function SyncedTableShell({ children }) {
+function SyncedTableShell({ children, isMobile = false }) {
+  const portalReady = typeof document !== "undefined";
   const tableShellRef = useRef(null);
   const bottomScrollbarRef = useRef(null);
   const bottomTrackRef = useRef(null);
@@ -1064,15 +1063,9 @@ function SyncedTableShell({ children }) {
     width: 0,
     visible: false
   });
-  const [portalReady, setPortalReady] = useState(false);
-
-  useEffect(() => {
-    setPortalReady(typeof document !== "undefined");
-  }, []);
-
   useEffect(() => {
     const tableShell = tableShellRef.current;
-    if (!tableShell) {
+    if (!tableShell || isMobile) {
       return undefined;
     }
 
@@ -1127,12 +1120,12 @@ function SyncedTableShell({ children }) {
         window.removeEventListener("resize", syncMeasurements);
       }
     };
-  }, [children]);
+  }, [children, isMobile]);
 
   useEffect(() => {
     const tableShell = tableShellRef.current;
     const bottomScrollbar = bottomScrollbarRef.current;
-    if (!tableShell || !bottomScrollbar || !isScrollable) {
+    if (!tableShell || !bottomScrollbar || !isScrollable || isMobile) {
       return undefined;
     }
 
@@ -1166,14 +1159,14 @@ function SyncedTableShell({ children }) {
       tableShell.removeEventListener("scroll", syncFromTable);
       bottomScrollbar.removeEventListener("scroll", syncFromBottom);
     };
-  }, [isScrollable, children]);
+  }, [isScrollable, children, isMobile]);
 
   return (
     <div style={styles.tableShellWrap}>
       <div ref={tableShellRef} style={styles.tableShell}>
         {children}
       </div>
-      {portalReady && isScrollable && dockStyle.visible && createPortal(
+      {portalReady && !isMobile && isScrollable && dockStyle.visible && createPortal(
         <div
           ref={bottomScrollbarRef}
           style={{

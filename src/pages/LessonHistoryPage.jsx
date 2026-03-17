@@ -3,10 +3,12 @@ import { useApp } from '../context/useApp';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useI18n } from '../i18n/useI18n';
 import { getCourseDisplayNameFromSource } from '../lib/courseUtils';
+import { useResponsiveLayout } from '../lib/responsive';
 
 export default function LessonHistoryPage() {
   const { language } = useI18n();
   const isHe = language === 'he';
+  const { isMobile } = useResponsiveLayout();
   const { getLessonHistory, loading } = useApp();
   const [lessons, setLessons] = useState([]);
 
@@ -26,7 +28,7 @@ export default function LessonHistoryPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: 16, display: 'grid', gap: 16 }}>
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: isMobile ? 12 : 16, display: 'grid', gap: 16 }}>
       {loading && <LoadingSpinner fullScreen />}
       <h1 style={{ marginTop: 0 }}>{isHe ? 'היסטוריית שיעורים' : 'Lesson History'}</h1>
 
@@ -36,7 +38,7 @@ export default function LessonHistoryPage() {
         <div style={{ display: 'grid', gap: 10 }}>
           {lessons.map((lesson) => (
             <div key={lesson.id} style={styles.card}>
-              <div style={styles.row}>
+              <div style={{ ...styles.row, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
                 <strong>{getCourseDisplayNameFromSource(lesson, language)}</strong>
                 <span style={styles.badge}>{lesson.status}</span>
               </div>

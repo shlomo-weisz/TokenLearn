@@ -137,6 +137,11 @@ export default function CalendarPage() {
     return items;
   }, [visibleStart, visibleEnd]);
 
+  const monthDays = useMemo(
+    () => days.filter((day) => day.getMonth() === currentMonth.getMonth()),
+    [days, currentMonth]
+  );
+
   const selectedDayLessons = useMemo(() => {
     const key = toLocalIso(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0)).slice(0, 10);
     return lessonsByDay[key] || [];
@@ -252,18 +257,11 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div style={styles.calendarScroll}>
-            <div style={{ ...styles.weekHeader, minWidth: isMobile ? 560 : 720 }}>
-              {DAY_NAMES[language] && DAY_NAMES[language].map((dayName) => (
-                <div key={dayName} style={styles.weekHeaderCell}>{dayName}</div>
-              ))}
-            </div>
-
-            <div style={{ ...styles.grid, minWidth: isMobile ? 560 : 720 }}>
-              {days.map((day) => {
+          {isMobile ? (
+            <div style={styles.mobileDayList}>
+              {monthDays.map((day) => {
                 const key = toLocalIso(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0)).slice(0, 10);
                 const items = lessonsByDay[key] || [];
-                const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
                 const isSelected = sameDay(day, selectedDate);
                 const isToday = sameDay(day, new Date());
 
@@ -273,52 +271,136 @@ export default function CalendarPage() {
                     type="button"
                     onClick={() => setSelectedDate(day)}
                     style={{
-                      ...styles.dayCell,
-                      minHeight: isMobile ? 96 : 120,
-                      ...(isCurrentMonth ? null : styles.dayCellMuted),
-                      ...(isSelected ? styles.dayCellSelected : null)
+                      ...styles.mobileDayCard,
+                      ...(isSelected ? styles.mobileDayCardSelected : null)
                     }}
                   >
-                    <div style={styles.dayCellTop}>
-                      <span style={{
-                        ...styles.dayNumber,
-                        ...(isToday ? styles.todayBubble : null)
-                      }}>
-                        {day.getDate()}
-                      </span>
+                    <div style={styles.mobileDayHeader}>
+                      <div style={styles.mobileDayHeaderMain}>
+                        <span style={{ ...styles.mobileDayNumber, ...(isToday ? styles.mobileDayToday : null) }}>
+                          {day.getDate()}
+                        </span>
+                        <div style={styles.mobileDayMeta}>
+                          <strong style={styles.mobileDayLabel}>
+                            {day.toLocaleDateString(isHe ? 'he-IL' : 'en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </strong>
+                          <span style={styles.mobileDayHint}>
+                            {items.length === 0
+                              ? (isHe ? 'אין שיעורים ביום הזה' : 'No lessons on this day')
+                              : (isHe ? `${items.length} שיעורים ביום הזה` : `${items.length} lessons on this day`)}
+                          </span>
+                        </div>
+                      </div>
                       {items.length > 0 && <span style={styles.countBadge}>{items.length}</span>}
                     </div>
 
-                    <div style={styles.dayPreviewList}>
-                      {items.slice(0, 2).map((lesson) => {
-                        const tone = getStatusTone(lesson.status);
-                        const courseLabel = getCourseDisplayNameFromSource(lesson, language);
-                        return (
-                          <div
-                            key={lesson.id}
-                            style={{
-                              ...styles.dayPreviewItem,
-                              background: tone.background,
-                              color: tone.color,
-                              borderColor: tone.borderColor
-                            }}
-                          >
-                            <span>{formatLessonTime(lesson.dateTime)}</span>
-                            <span style={styles.previewTopic}>{courseLabel}</span>
+                    {items.length > 0 ? (
+                      <div style={styles.mobilePreviewList}>
+                        {items.slice(0, 3).map((lesson) => {
+                          const tone = getStatusTone(lesson.status);
+                          const courseLabel = getCourseDisplayNameFromSource(lesson, language);
+                          return (
+                            <div
+                              key={lesson.id}
+                              style={{
+                                ...styles.mobilePreviewItem,
+                                background: tone.background,
+                                color: tone.color,
+                                borderColor: tone.borderColor
+                              }}
+                            >
+                              <span>{formatLessonTime(lesson.dateTime)}</span>
+                              <span style={styles.mobilePreviewTopic}>{courseLabel}</span>
+                            </div>
+                          );
+                        })}
+                        {items.length > 3 && (
+                          <div style={styles.moreLabel}>
+                            {isHe ? `ועוד ${items.length - 3}` : `+${items.length - 3} more`}
                           </div>
-                        );
-                      })}
-                      {items.length > 2 && (
-                        <div style={styles.moreLabel}>
-                          {isHe ? `ועוד ${items.length - 2}` : `+${items.length - 2} more`}
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={styles.mobileEmptyPreview}>
+                        {isHe ? 'לחצ/י כדי לבחור את היום ולהציג פרטים.' : 'Tap to select this day and view details.'}
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </div>
-          </div>
+          ) : (
+            <div style={styles.calendarScroll}>
+              <div style={{ ...styles.weekHeader, minWidth: 720 }}>
+                {DAY_NAMES[language] && DAY_NAMES[language].map((dayName) => (
+                  <div key={dayName} style={styles.weekHeaderCell}>{dayName}</div>
+                ))}
+              </div>
+
+              <div style={{ ...styles.grid, minWidth: 720 }}>
+                {days.map((day) => {
+                  const key = toLocalIso(new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0)).slice(0, 10);
+                  const items = lessonsByDay[key] || [];
+                  const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+                  const isSelected = sameDay(day, selectedDate);
+                  const isToday = sameDay(day, new Date());
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedDate(day)}
+                      style={{
+                        ...styles.dayCell,
+                        ...(isCurrentMonth ? null : styles.dayCellMuted),
+                        ...(isSelected ? styles.dayCellSelected : null)
+                      }}
+                    >
+                      <div style={styles.dayCellTop}>
+                        <span style={{
+                          ...styles.dayNumber,
+                          ...(isToday ? styles.todayBubble : null)
+                        }}>
+                          {day.getDate()}
+                        </span>
+                        {items.length > 0 && <span style={styles.countBadge}>{items.length}</span>}
+                      </div>
+
+                      <div style={styles.dayPreviewList}>
+                        {items.slice(0, 2).map((lesson) => {
+                          const tone = getStatusTone(lesson.status);
+                          const courseLabel = getCourseDisplayNameFromSource(lesson, language);
+                          return (
+                            <div
+                              key={lesson.id}
+                              style={{
+                                ...styles.dayPreviewItem,
+                                background: tone.background,
+                                color: tone.color,
+                                borderColor: tone.borderColor
+                              }}
+                            >
+                              <span>{formatLessonTime(lesson.dateTime)}</span>
+                              <span style={styles.previewTopic}>{courseLabel}</span>
+                            </div>
+                          );
+                        })}
+                        {items.length > 2 && (
+                          <div style={styles.moreLabel}>
+                            {isHe ? `ועוד ${items.length - 2}` : `+${items.length - 2} more`}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card style={{ ...styles.detailsCard, padding: isMobile ? 14 : 18 }} hoverable={false}>
@@ -574,6 +656,89 @@ const styles = {
     fontSize: 11,
     color: '#64748b',
     fontWeight: 700
+  },
+  mobileDayList: {
+    display: 'grid',
+    gap: 10
+  },
+  mobileDayCard: {
+    borderRadius: 16,
+    border: '1px solid rgba(148, 163, 184, 0.25)',
+    background: 'rgba(255,255,255,0.94)',
+    padding: 12,
+    display: 'grid',
+    gap: 10,
+    textAlign: 'start'
+  },
+  mobileDayCardSelected: {
+    borderColor: '#38bdf8',
+    boxShadow: '0 10px 24px rgba(14, 165, 233, 0.12)',
+    background: 'linear-gradient(180deg, rgba(240,249,255,0.95), rgba(255,255,255,0.98))'
+  },
+  mobileDayHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10
+  },
+  mobileDayHeaderMain: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 0
+  },
+  mobileDayNumber: {
+    minWidth: 38,
+    height: 38,
+    borderRadius: 12,
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    color: '#0f172a',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 800
+  },
+  mobileDayToday: {
+    background: '#0ea5e9',
+    borderColor: '#0ea5e9',
+    color: '#ffffff'
+  },
+  mobileDayMeta: {
+    display: 'grid',
+    gap: 3,
+    minWidth: 0
+  },
+  mobileDayLabel: {
+    color: '#0f172a',
+    fontSize: 14
+  },
+  mobileDayHint: {
+    color: '#64748b',
+    fontSize: 12
+  },
+  mobilePreviewList: {
+    display: 'grid',
+    gap: 8
+  },
+  mobilePreviewItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 10px',
+    borderRadius: 12,
+    border: '1px solid transparent',
+    fontSize: 12
+  },
+  mobilePreviewTopic: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  mobileEmptyPreview: {
+    color: '#64748b',
+    fontSize: 12,
+    lineHeight: 1.6
   },
   detailsHeader: {
     marginBottom: 14

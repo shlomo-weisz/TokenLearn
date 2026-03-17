@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../context/useApp';
 import { useI18n } from "../i18n/useI18n";
+import { useResponsiveLayout } from '../lib/responsive';
 
 export default function RatingPage() {
   const { language } = useI18n();
   const isHe = language === 'he';
+  const { isMobile } = useResponsiveLayout();
   const { user, getUserRatings } = useApp();
   const [ratingsData, setRatingsData] = useState({ averageRating: 0, totalRatings: 0, ratings: [] });
 
@@ -26,15 +28,15 @@ export default function RatingPage() {
   const { averageRating, totalRatings, ratings } = ratingsData;
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: 16, display: "grid", gap: 16 }}>
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? 12 : 16, display: "grid", gap: 16 }}>
       <h1 style={{ marginTop: 0 }}>{isHe ? 'דירוג' : 'Rating'}</h1>
 
-      <div style={{ background: "linear-gradient(135deg, #ffffff 0%, #f4f7ff 100%)", border: "1px solid #dbeafe", borderRadius: 16, padding: 16, boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ background: "linear-gradient(135deg, #ffffff 0%, #f4f7ff 100%)", border: "1px solid #dbeafe", borderRadius: 16, padding: 16, boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)", display: "flex", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", flexDirection: isMobile ? "column" : "row", gap: 12 }}>
         <div>
           <div style={{ fontSize: 14, color: "#475569" }}>{isHe ? 'דירוג ממוצע מתלמידים' : 'Average rating from students'}</div>
           <div style={{ fontSize: 30, fontWeight: 800 }}>{Number(averageRating || 0).toFixed(2)}</div>
         </div>
-        <div style={{ padding: "10px 14px", borderRadius: 999, background: "linear-gradient(135deg, #22d3ee, #0ea5e9)", color: "#0b1021", fontWeight: 700, border: "1px solid #0ea5e9" }}>
+        <div style={{ padding: "10px 14px", borderRadius: isMobile ? 14 : 999, background: "linear-gradient(135deg, #22d3ee, #0ea5e9)", color: "#0b1021", fontWeight: 700, border: "1px solid #0ea5e9", width: isMobile ? "100%" : "auto", textAlign: "center" }}>
           {isHe ? `מבוסס על ${totalRatings} שיעורים` : `Based on ${totalRatings} lessons`}
         </div>
       </div>
@@ -42,7 +44,7 @@ export default function RatingPage() {
       <div style={{ display: "grid", gap: 12 }}>
         {ratings.map((rating) => (
           <div key={rating.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, background: "white", boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)", display: "grid", gap: 6 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{isHe ? 'מאת' : 'From'}: {rating.ratedBy}</div>
               <div style={{ padding: "6px 10px", borderRadius: 999, background: "#ecfeff", color: "#0ea5e9", fontWeight: 700 }}>{Number(rating.rating || 0).toFixed(1)} ★</div>
             </div>

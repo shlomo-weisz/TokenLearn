@@ -1,5 +1,6 @@
 import { useI18n } from '../i18n/useI18n';
 import { isValidDate, parseFlexibleDate } from '../lib/dateTimeUtils';
+import { useResponsiveLayout } from '../lib/responsive';
 
 const REASON_KEYS = {
   welcomeBonus: [
@@ -67,6 +68,7 @@ export default function TokenHistoryList({
 }) {
   const { language } = useI18n();
   const isHe = language === 'he';
+  const { isMobile } = useResponsiveLayout();
 
   const resolvedEmptyMessage = emptyMessage || (isHe ? 'אין תנועות טוקנים להצגה.' : 'No token transactions to display.');
 
@@ -290,7 +292,7 @@ export default function TokenHistoryList({
 
         return (
           <div key={transaction.id} style={styles.card} dir={isHe ? 'rtl' : 'ltr'}>
-            <div style={styles.headerRow}>
+            <div style={{ ...styles.headerRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'flex-start' }}>
               <div style={styles.titleBlock}>
                 <span style={{ ...styles.icon, color: meta.tone, background: meta.bg }} aria-hidden="true">{meta.icon}</span>
                 <div style={styles.titleText}>
@@ -298,7 +300,7 @@ export default function TokenHistoryList({
                   <span style={styles.dateText}>{formatDate(transaction.createdAt)}</span>
                 </div>
               </div>
-              <div style={{ ...styles.amountBadge, color: positive ? '#065f46' : '#991b1b', background: positive ? '#ecfdf5' : '#fef2f2' }}>
+              <div style={{ ...styles.amountBadge, color: positive ? '#065f46' : '#991b1b', background: positive ? '#ecfdf5' : '#fef2f2', alignSelf: isMobile ? 'flex-start' : 'auto' }}>
                 {formatAmount(transaction.amount)}
               </div>
             </div>

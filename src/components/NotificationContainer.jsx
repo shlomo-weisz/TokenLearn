@@ -1,8 +1,10 @@
 import React from 'react';
 import { useApp } from '../context/useApp';
+import { useResponsiveLayout } from '../lib/responsive';
 
 export default function NotificationContainer() {
   const { notifications, removeNotification } = useApp();
+  const { isMobile } = useResponsiveLayout();
 
   if (notifications.length === 0) return null;
 
@@ -17,7 +19,7 @@ export default function NotificationContainer() {
   };
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, top: isMobile ? 12 : 20, right: isMobile ? 0 : 20, left: isMobile ? 0 : 'auto', maxWidth: isMobile ? '100%' : 420 }}>
       {notifications.map(notification => (
         <div
           key={notification.id}

@@ -8,10 +8,12 @@ import { useApp } from "../context/useApp";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { formatNotificationDate } from "../lib/notificationInbox";
+import { useResponsiveLayout } from "../lib/responsive";
 
 export default function LessonPage() {
   const { language } = useI18n();
   const isHe = language === "he";
+  const { isMobile } = useResponsiveLayout();
   const { id: lessonId } = useParams();
   const navigate = useNavigate();
   const {
@@ -279,7 +281,7 @@ export default function LessonPage() {
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: 16 }}>
+    <div style={{ maxWidth: 860, margin: "0 auto", padding: isMobile ? 12 : 16 }}>
       {loading && <LoadingSpinner fullScreen />}
 
       <button
@@ -301,7 +303,7 @@ export default function LessonPage() {
 
       <Card style={{ maxWidth: "100%" }} hoverable={false}>
         <div style={{ display: "grid", gap: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, flexDirection: isMobile ? "column" : "row" }}>
             <div>
               <h1 style={{ margin: "0 0 8px 0", fontSize: 24 }}>{lessonCourseLabel || (isHe ? "שיעור" : "Lesson")}</h1>
               <div style={{ color: "#64748b", fontSize: 14 }}>
@@ -312,7 +314,7 @@ export default function LessonPage() {
           </div>
 
           <div style={styles.infoCard}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 16, flexDirection: isMobile ? "column" : "row" }}>
               <div style={styles.avatar}>
                 {otherPersonName.charAt(0).toUpperCase()}
               </div>
@@ -350,7 +352,7 @@ export default function LessonPage() {
           )}
 
           <div style={styles.section}>
-            <div style={styles.sectionHeader}>
+            <div style={{ ...styles.sectionHeader, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center" }}>
               <h3 style={styles.sectionTitle}>✉️ {isHe ? "תיאום והודעות" : "Coordination Messages"}</h3>
               {isLoadingMessages && (
                 <span style={styles.smallMeta}>{isHe ? "טוען..." : "Loading..."}</span>
@@ -371,10 +373,11 @@ export default function LessonPage() {
                       key={item.id}
                       style={{
                         ...styles.messageBubble,
+                        maxWidth: isMobile ? "100%" : "86%",
                         ...(item.isOwnMessage ? styles.messageBubbleOwn : styles.messageBubbleOther)
                       }}
                     >
-                      <div style={styles.messageMetaRow}>
+                      <div style={{ ...styles.messageMetaRow, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center" }}>
                         <strong>{item.isOwnMessage ? (isHe ? "אני" : "You") : (item.senderName || otherPersonName)}</strong>
                         <span style={styles.smallMeta}>
                           {formatNotificationDate(item.createdAt || item.scheduledAt, language)}
@@ -399,8 +402,8 @@ export default function LessonPage() {
                   style={styles.textarea}
                   rows={3}
                 />
-                <div style={styles.composeActions}>
-                  <Button onClick={handleSendCoordination} disabled={isSendingCoordination}>
+                <div style={{ ...styles.composeActions, justifyContent: isMobile ? "stretch" : "flex-end" }}>
+                  <Button onClick={handleSendCoordination} disabled={isSendingCoordination} style={{ width: isMobile ? "100%" : "auto" }}>
                     {isSendingCoordination ? (isHe ? "שולח/ת..." : "Sending...") : (isHe ? "שליחת הודעה" : "Send Message")}
                   </Button>
                 </div>
@@ -409,9 +412,9 @@ export default function LessonPage() {
           </div>
 
           {lesson.status === "scheduled" && (
-            <div style={styles.actions}>
+            <div style={{ ...styles.actions, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center" }}>
               {canCompleteScheduledLesson ? (
-                <Button onClick={handleCompleteLesson} disabled={isSubmitting}>
+                <Button onClick={handleCompleteLesson} disabled={isSubmitting} style={{ width: isMobile ? "100%" : "auto" }}>
                   {isSubmitting ? (isHe ? "מסיים/ת..." : "Completing...") : (isHe ? "✓ סיום שיעור" : "✓ Complete Lesson")}
                 </Button>
               ) : (
@@ -423,7 +426,7 @@ export default function LessonPage() {
               {canCancelScheduledLesson && (
                 <button
                   onClick={() => setShowCancelModal(true)}
-                  style={styles.dangerBtn}
+                  style={{ ...styles.dangerBtn, width: isMobile ? "100%" : "auto" }}
                 >
                   {isHe ? "ביטול שיעור" : "Cancel Lesson"}
                 </button>
@@ -432,16 +435,16 @@ export default function LessonPage() {
           )}
 
           {lesson.status === "completed" && isStudent && !lesson.myRating && !showRatingForm && (
-            <div style={styles.actions}>
-              <Button onClick={openRatingForm}>
+            <div style={{ ...styles.actions, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center" }}>
+              <Button onClick={openRatingForm} style={{ width: isMobile ? "100%" : "auto" }}>
                 ⭐ {isHe ? "דירוג השיעור" : "Rate This Lesson"}
               </Button>
             </div>
           )}
 
           {lesson.status === "completed" && isStudent && canEditExistingRating && !showRatingForm && (
-            <div style={styles.actions}>
-              <Button onClick={openRatingForm}>
+            <div style={{ ...styles.actions, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center" }}>
+              <Button onClick={openRatingForm} style={{ width: isMobile ? "100%" : "auto" }}>
                 ✏️ {isHe ? "ערוך/י דירוג" : "Edit Rating"}
               </Button>
             </div>
@@ -462,7 +465,7 @@ export default function LessonPage() {
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
                   {isHe ? `איך הייתה החוויה שלך עם ${lesson.tutorName}?` : `How was your experience with ${lesson.tutorName}?`}
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
@@ -497,8 +500,8 @@ export default function LessonPage() {
                 />
               </div>
 
-              <div style={{ display: "flex", gap: 12 }}>
-                <Button onClick={handleSubmitRating} disabled={isSubmitting || (lesson.myRating && !canEditExistingRating)}>
+              <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column-reverse" : "row" }}>
+                <Button onClick={handleSubmitRating} disabled={isSubmitting || (lesson.myRating && !canEditExistingRating)} style={{ width: isMobile ? "100%" : "auto" }}>
                   {isSubmitting
                     ? (isHe ? "שולח/ת..." : "Submitting...")
                     : lesson.myRating
@@ -507,7 +510,7 @@ export default function LessonPage() {
                 </Button>
                 <button
                   onClick={() => setShowRatingForm(false)}
-                  style={styles.cancelBtn}
+                  style={{ ...styles.cancelBtn, width: isMobile ? "100%" : "auto" }}
                 >
                   {isHe ? "דילוג" : "Skip"}
                 </button>

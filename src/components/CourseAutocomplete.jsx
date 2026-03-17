@@ -12,12 +12,10 @@ export default function CourseAutocomplete({
 }) {
   const wrapperRef = useRef(null);
   const selectedCourse = normalizeCourse(value);
-  const [query, setQuery] = useState(getCourseDisplayName(selectedCourse, language));
+  const selectedCourseLabel = getCourseDisplayName(selectedCourse, language);
+  const [query, setQuery] = useState(selectedCourseLabel);
+  const [hasManualInput, setHasManualInput] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    setQuery(getCourseDisplayName(selectedCourse, language));
-  }, [selectedCourse?.id, selectedCourse?.courseNumber, selectedCourse?.nameHe, selectedCourse?.nameEn, selectedCourse?.name, language]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -34,16 +32,19 @@ export default function CourseAutocomplete({
     return options
       .map((item) => normalizeCourse(item))
       .filter(Boolean)
-      .filter((course) => matchesCourseQuery(course, query, language))
+      .filter((course) => matchesCourseQuery(course, hasManualInput ? query : selectedCourseLabel, language))
       .slice(0, 50);
-  }, [language, options, query]);
+  }, [hasManualInput, language, options, query, selectedCourseLabel]);
 
   const handleSelect = (course) => {
     const normalized = normalizeCourse(course);
     onChange(normalized);
     setQuery(getCourseDisplayName(normalized, language));
+    setHasManualInput(false);
     setIsOpen(false);
   };
+
+  const inputValue = hasManualInput ? query : selectedCourseLabel;
 
   return (
     <label style={{ display: "grid", gap: 8 }}>
@@ -54,7 +55,7 @@ export default function CourseAutocomplete({
       )}
       <div ref={wrapperRef} style={{ position: "relative" }}>
         <input
-          value={query}
+          value={inputValue}
           onFocus={() => {
             if (!disabled) {
               setIsOpen(true);
@@ -63,6 +64,7 @@ export default function CourseAutocomplete({
           onChange={(event) => {
             const nextValue = event.target.value;
             setQuery(nextValue);
+            setHasManualInput(true);
             if (selectedCourse) {
               onChange(null);
             }
@@ -90,6 +92,7 @@ export default function CourseAutocomplete({
             onClick={() => {
               onChange(null);
               setQuery("");
+              setHasManualInput(true);
               setIsOpen(true);
             }}
             style={{

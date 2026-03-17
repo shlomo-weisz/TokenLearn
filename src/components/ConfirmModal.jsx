@@ -1,5 +1,5 @@
 import React from 'react';
-import Button from './Button';
+import { useResponsiveLayout } from '../lib/responsive';
 
 export default function ConfirmModal({ 
   isOpen, 
@@ -11,6 +11,7 @@ export default function ConfirmModal({
   cancelText = 'Cancel',
   confirmStyle = 'primary' // primary, danger
 }) {
+  const { isMobile } = useResponsiveLayout();
   if (!isOpen) return null;
 
   return (
@@ -24,8 +25,8 @@ export default function ConfirmModal({
             {message}
           </p>
         </div>
-        <div style={styles.actions}>
-          <button onClick={onClose} style={styles.cancelBtn}>
+        <div style={{ ...styles.actions, flexDirection: isMobile ? 'column-reverse' : 'row' }}>
+          <button onClick={onClose} style={{ ...styles.cancelBtn, width: isMobile ? '100%' : 'auto' }}>
             {cancelText}
           </button>
           <button 
@@ -33,7 +34,7 @@ export default function ConfirmModal({
               onConfirm();
               onClose();
             }}
-            style={confirmStyle === 'danger' ? styles.dangerBtn : styles.confirmBtn}
+            style={{ ...(confirmStyle === 'danger' ? styles.dangerBtn : styles.confirmBtn), width: isMobile ? '100%' : 'auto' }}
           >
             {confirmText}
           </button>

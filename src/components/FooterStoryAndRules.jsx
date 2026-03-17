@@ -1,12 +1,14 @@
 import React from "react";
 import { useI18n } from "../i18n/useI18n";
+import { useResponsiveLayout } from "../lib/responsive";
 
 export default function FooterStoryAndRules() {
   const { language } = useI18n();
   const isHe = language === 'he';
+  const { isMobile } = useResponsiveLayout();
 
   return (
-    <footer style={styles.footer}>
+    <footer style={{ ...styles.footer, gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 180 : 240}px, 1fr))` }}>
       <div>
         <h3>{isHe ? 'הסיפור שלנו' : 'Our Story'}</h3>
         <p>
