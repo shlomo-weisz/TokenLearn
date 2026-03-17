@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/useApp';
 import { useI18n } from '../i18n/useI18n';
-import LanguageSwitcher from './LanguageSwitcher';
 import TokenBalanceMenu from './TokenBalanceMenu';
 import { useResponsiveLayout } from '../lib/responsive';
 
@@ -71,7 +70,6 @@ export default function HeaderTopBar({ tutorRating = null, onContactUs }) {
           {t('headerTopBar.tutorRating')}: <b>{tutorRating ?? t('common.na')}</b>
         </div>
         <TokenBalanceMenu tokenSummary={tokenSummary} compact={isMobile} />
-        <LanguageSwitcher compact={isMobile} />
       </div>
     </header>
   );

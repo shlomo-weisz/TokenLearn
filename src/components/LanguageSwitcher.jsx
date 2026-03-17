@@ -7,74 +7,59 @@ export default function LanguageSwitcher({ compact = false }) {
   const useCompactLayout = compact || isMobile;
 
   return (
-    <label
+    <div
       style={{
         ...styles.wrapper,
-        flexDirection: useCompactLayout ? 'row' : 'column',
-        alignItems: 'center',
-        width: compact ? 'auto' : isMobile ? '100%' : 'auto',
-        padding: compact ? '6px 10px' : styles.wrapper.padding,
-        gap: compact ? 6 : 8
+        width: compact ? 'auto' : isMobile ? '100%' : 'auto'
       }}
     >
-      {!compact && (
-        <span
-          style={{
-            ...styles.label,
-            minWidth: useCompactLayout ? 0 : 70,
-            whiteSpace: useCompactLayout ? 'normal' : 'nowrap',
-            textAlign: useCompactLayout ? 'center' : 'start'
-          }}
-        >
-          🌐 {t('common.language')}
-        </span>
-      )}
-      {compact && <span style={styles.compactIcon}>🌐</span>}
+      <span style={styles.icon} aria-hidden="true">🌐</span>
+      {!useCompactLayout && <span style={styles.label}>{t('common.language')}</span>}
       <select
         value={language}
         onChange={(e) => setLanguage(e.target.value)}
         style={{
           ...styles.select,
-          minWidth: compact ? 72 : useCompactLayout ? 0 : 86,
+          minWidth: compact ? 76 : useCompactLayout ? 0 : 88,
           width: compact ? 'auto' : isMobile ? '100%' : 'auto'
         }}
+        aria-label={t('common.language')}
       >
         <option value="he">{t('common.hebrew')}</option>
         <option value="en">{t('common.english')}</option>
       </select>
-    </label>
+    </div>
   );
 }
 
 const styles = {
   wrapper: {
     display: 'inline-flex',
-    gap: 8,
+    gap: 6,
     alignItems: 'center',
     fontSize: 13,
-    color: '#334155',
-    padding: '8px 12px',
+    color: '#0f172a',
+    padding: '10px 14px',
     borderRadius: 12,
     border: '1px solid rgba(148, 163, 184, 0.3)',
-    background: 'rgba(255, 255, 255, 0.95)',
-    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)'
-  },
-  label: {
-    fontWeight: 700,
-    minWidth: 70,
+    background: 'linear-gradient(135deg, rgba(226, 232, 240, 0.55), rgba(203, 213, 225, 0.45))',
+    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)',
     whiteSpace: 'nowrap'
   },
-  compactIcon: {
+  icon: {
     fontSize: 14,
     lineHeight: 1
+  },
+  label: {
+    fontWeight: 700
   },
   select: {
     border: '1px solid #cbd5e1',
     borderRadius: 8,
-    padding: '6px 8px',
-    background: 'white',
+    padding: '5px 8px',
+    background: 'rgba(255, 255, 255, 0.96)',
     color: '#0f172a',
-    minWidth: 86,
+    minWidth: 88,
     fontWeight: 600
   }
 };
