@@ -40,9 +40,9 @@ Authorization: Bearer <jwt>
 
 ## 1. Authentication
 
-### 1.1 Login
+### 1.1 Create Session
 - **Method:** `POST`
-- **Endpoint:** `/api/auth/login`
+- **Endpoint:** `/api/sessions`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -73,9 +73,9 @@ Authorization: Bearer <jwt>
 }
 ```
 
-### 1.2 Register
+### 1.2 Register User
 - **Method:** `POST`
-- **Endpoint:** `/api/auth/register`
+- **Endpoint:** `/api/users`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -113,7 +113,7 @@ Authorization: Bearer <jwt>
 
 ### 1.3 Get Secret Question
 - **Method:** `POST`
-- **Endpoint:** `/api/auth/secret-question`
+- **Endpoint:** `/api/password-reset-questions`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -133,7 +133,7 @@ Authorization: Bearer <jwt>
 
 ### 1.4 Verify Secret Answer
 - **Method:** `POST`
-- **Endpoint:** `/api/auth/verify-secret-answer`
+- **Endpoint:** `/api/password-reset-verifications`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -164,7 +164,7 @@ Authorization: Bearer <jwt>
 
 ### 1.5 Reset Password
 - **Method:** `POST`
-- **Endpoint:** `/api/auth/reset-password`
+- **Endpoint:** `/api/password-resets`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -186,7 +186,7 @@ Authorization: Bearer <jwt>
 
 ### 1.6 Google Login
 - **Method:** `POST`
-- **Endpoint:** `/api/auth/google`
+- **Endpoint:** `/api/google-sessions`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -196,11 +196,11 @@ Authorization: Bearer <jwt>
 }
 ```
 
-- **Response Data:** זהה ל־`/api/auth/login`, עם השדות `token`, `user`, `isNewUser`, `isFirstFiftyUser`, `bonusTokens`.
+- **Response Data:** זהה ל־`POST /api/sessions`, עם השדות `token`, `user`, `isNewUser`, `isFirstFiftyUser`, `bonusTokens`.
 
 ### 1.7 Logout
-- **Method:** `POST`
-- **Endpoint:** `/api/auth/logout`
+- **Method:** `DELETE`
+- **Endpoint:** `/api/sessions/current`
 - **Auth:** נדרש JWT
 - **Body:** אין
 - **Response Data:**
@@ -211,9 +211,9 @@ Authorization: Bearer <jwt>
 }
 ```
 
-### 1.8 Verify Token
+### 1.8 Get Current Session
 - **Method:** `GET`
-- **Endpoint:** `/api/auth/verify`
+- **Endpoint:** `/api/sessions/current`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -238,7 +238,7 @@ Authorization: Bearer <jwt>
 
 ### 2.1 Get Current User Profile
 - **Method:** `GET`
-- **Endpoint:** `/api/users/me`
+- **Endpoint:** `/api/users/current`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -288,8 +288,8 @@ Authorization: Bearer <jwt>
 ```
 
 ### 2.2 Update User Profile
-- **Method:** `POST`
-- **Endpoint:** `/api/users/profile`
+- **Method:** `PATCH`
+- **Endpoint:** `/api/users/current`
 - **Auth:** נדרש JWT
 - **Body:**
 
@@ -323,11 +323,11 @@ Authorization: Bearer <jwt>
 }
 ```
 
-- **Response Data:** אותו מבנה כמו `GET /api/users/me`.
+- **Response Data:** אותו מבנה כמו `GET /api/users/current`.
 
 ### 2.3 Upload Profile Photo
-- **Method:** `POST`
-- **Endpoint:** `/api/users/me/photo`
+- **Method:** `PUT`
+- **Endpoint:** `/api/users/current/photo`
 - **Auth:** נדרש JWT
 - **Content-Type:** `multipart/form-data`
 - **Body:** שדה קובץ בשם `file`
@@ -343,7 +343,7 @@ Authorization: Bearer <jwt>
 - **Method:** `GET`
 - **Endpoint:** `/api/users/{userId}`
 - **Auth:** נדרש JWT
-- **Response Data:** אותו מבנה כמו `GET /api/users/me`, אבל `secretQuestion` אינו מוחזר לשאר המשתמשים.
+- **Response Data:** אותו מבנה כמו `GET /api/users/current`, אבל `secretQuestion` אינו מוחזר לשאר המשתמשים.
 
 ### 2.5 Get User Ratings
 - **Method:** `GET`
@@ -371,7 +371,7 @@ Authorization: Bearer <jwt>
 
 ### 3.1 Get Token Balance
 - **Method:** `GET`
-- **Endpoint:** `/api/tokens/balance`
+- **Endpoint:** `/api/token-balances/current`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -388,7 +388,7 @@ Authorization: Bearer <jwt>
 
 ### 3.2 Buy Tokens
 - **Method:** `POST`
-- **Endpoint:** `/api/tokens/buy`
+- **Endpoint:** `/api/token-purchases`
 - **Auth:** נדרש JWT
 - **Body:**
 
@@ -414,7 +414,7 @@ Authorization: Bearer <jwt>
 
 ### 3.3 Transfer Tokens
 - **Method:** `POST`
-- **Endpoint:** `/api/tokens/transfer`
+- **Endpoint:** `/api/token-transfers`
 - **Auth:** נדרש JWT
 - **Body:**
 
@@ -439,7 +439,7 @@ Authorization: Bearer <jwt>
 
 ### 3.4 Token History
 - **Method:** `GET`
-- **Endpoint:** `/api/tokens/history`
+- **Endpoint:** `/api/token-transactions`
 - **Auth:** נדרש JWT
 - **Query Params:** `limit`, `offset`
 - **Response Data:**
@@ -493,7 +493,7 @@ Authorization: Bearer <jwt>
 
 ### 4.2 Get Course Categories
 - **Method:** `GET`
-- **Endpoint:** `/api/courses/categories`
+- **Endpoint:** `/api/course-categories`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -513,7 +513,7 @@ Authorization: Bearer <jwt>
 
 ### 5.1 Get Lesson Requests as Student
 - **Method:** `GET`
-- **Endpoint:** `/api/lesson-requests/student`
+- **Endpoint:** `/api/lesson-requests?role=student`
 - **Auth:** נדרש JWT
 - **Query Params:** `status` אופציונלי, למשל `pending`, `approved`, `completed`, `rejected`, `cancelled`, `expired`
 - **Response Data:** מערך
@@ -549,7 +549,7 @@ Authorization: Bearer <jwt>
 
 ### 5.2 Get Lesson Requests as Teacher
 - **Method:** `GET`
-- **Endpoint:** `/api/lesson-requests/teacher`
+- **Endpoint:** `/api/lesson-requests?role=teacher`
 - **Auth:** נדרש JWT
 - **Query Params:** `status` אופציונלי, למשל `pending`, `approved`, `completed`, `rejected`, `cancelled`, `expired`
 - **Response Data:** מערך
@@ -619,10 +619,16 @@ Authorization: Bearer <jwt>
 ```
 
 ### 5.4 Approve Lesson Request
-- **Method:** `POST`
-- **Endpoint:** `/api/lesson-requests/{requestId}/approve`
+- **Method:** `PATCH`
+- **Endpoint:** `/api/lesson-requests/{requestId}`
 - **Auth:** נדרש JWT של המורה
-- **Body:** אין
+- **Body:**
+
+```json
+{
+  "status": "APPROVED"
+}
+```
 - **Response Data:**
 
 ```json
@@ -634,14 +640,15 @@ Authorization: Bearer <jwt>
 ```
 
 ### 5.5 Reject Lesson Request
-- **Method:** `POST`
-- **Endpoint:** `/api/lesson-requests/{requestId}/reject`
+- **Method:** `PATCH`
+- **Endpoint:** `/api/lesson-requests/{requestId}`
 - **Auth:** נדרש JWT של המורה
 - **Body:**
 
 ```json
 {
-  "rejectionMessage": "I'm not available at that time"
+  "status": "REJECTED",
+  "reason": "I'm not available at that time"
 }
 ```
 
@@ -659,10 +666,16 @@ Authorization: Bearer <jwt>
 ```
 
 ### 5.6 Cancel Lesson Request
-- **Method:** `DELETE`
+- **Method:** `PATCH`
 - **Endpoint:** `/api/lesson-requests/{requestId}`
 - **Auth:** נדרש JWT של התלמיד
-- **Body:** אין
+- **Body:**
+
+```json
+{
+  "status": "CANCELLED"
+}
+```
 - **Response Data:**
 
 ```json
@@ -680,7 +693,7 @@ Authorization: Bearer <jwt>
 
 ### 6.1 Get Recommended Tutors
 - **Method:** `GET`
-- **Endpoint:** `/api/tutors/recommended`
+- **Endpoint:** `/api/tutor-recommendations`
 - **Auth:** נדרש JWT
 - **Query Params:** `limit`, `minRating`
 - **Response Data:** מערך
@@ -732,10 +745,10 @@ Authorization: Bearer <jwt>
 
 ### 6.2 Search Tutors
 - **Method:** `GET`
-- **Endpoint:** `/api/tutors/search`
+- **Endpoint:** `/api/tutors`
 - **Auth:** נדרש JWT
 - **Query Params:** `course`, `name`, `taughtMeBefore`, `minRating`, `limit`
-- **Response Data:** אותו מבנה כמו `GET /api/tutors/recommended`
+- **Response Data:** אותו מבנה כמו `GET /api/tutor-recommendations`
 
 ### 6.3 Get Tutor Profile
 - **Method:** `GET`

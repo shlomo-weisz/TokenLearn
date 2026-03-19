@@ -213,8 +213,9 @@ export default function LessonPage() {
     }
 
     setIsSubmitting(true);
-    const submitRating = lesson.myRating ? updateLessonRating : rateLesson;
-    const result = await submitRating(lesson.id, rating, comment);
+    const result = lesson.myRating
+      ? await updateLessonRating(lesson.myRating.id, rating, comment)
+      : await rateLesson(lesson.id, rating, comment);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -222,7 +223,11 @@ export default function LessonPage() {
         ...prev,
         ratedAt: result.data?.ratedAt || prev.ratedAt || new Date().toISOString(),
         ratingEditableUntil: result.data?.ratingEditableUntil || prev.ratingEditableUntil,
-        myRating: { rating, comment }
+        myRating: {
+          id: result.data?.ratingId || prev.myRating?.id,
+          rating,
+          comment
+        }
       }));
       setShowRatingForm(false);
       setComment("");
