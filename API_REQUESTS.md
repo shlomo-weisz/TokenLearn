@@ -1,6 +1,6 @@
 # TokenLearn API Requests
 
-עדכון אחרון: `2026-03-13`
+עדכון אחרון: `2026-03-19`
 
 המסמך הזה מתאר את כל קריאות ה־API שבשימוש בפועל מהלקוח (`client/src/context/AppContext.jsx`) אל השרת הנוכחי.
 
@@ -42,7 +42,7 @@ Authorization: Bearer <jwt>
 
 ### 1.1 Create Session
 - **Method:** `POST`
-- **Endpoint:** `/api/sessions`
+- **Endpoint:** `/api/session`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -113,7 +113,7 @@ Authorization: Bearer <jwt>
 
 ### 1.3 Get Secret Question
 - **Method:** `POST`
-- **Endpoint:** `/api/password-reset-questions`
+- **Endpoint:** `/api/password-reset-requests`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -131,9 +131,9 @@ Authorization: Bearer <jwt>
 }
 ```
 
-### 1.4 Verify Secret Answer
+### 1.4 Create Password Reset Token
 - **Method:** `POST`
-- **Endpoint:** `/api/password-reset-verifications`
+- **Endpoint:** `/api/password-reset-tokens`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -149,6 +149,7 @@ Authorization: Bearer <jwt>
 ```json
 {
   "verified": true,
+  "email": "user@example.com",
   "resetToken": "temporary_reset_token"
 }
 ```
@@ -162,9 +163,9 @@ Authorization: Bearer <jwt>
 }
 ```
 
-### 1.5 Reset Password
+### 1.5 Complete Password Reset
 - **Method:** `POST`
-- **Endpoint:** `/api/password-resets`
+- **Endpoint:** `/api/password-reset-completions`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -186,7 +187,7 @@ Authorization: Bearer <jwt>
 
 ### 1.6 Google Login
 - **Method:** `POST`
-- **Endpoint:** `/api/google-sessions`
+- **Endpoint:** `/api/identity-providers/google/sessions`
 - **Auth:** ציבורי
 - **Body:**
 
@@ -196,11 +197,11 @@ Authorization: Bearer <jwt>
 }
 ```
 
-- **Response Data:** זהה ל־`POST /api/sessions`, עם השדות `token`, `user`, `isNewUser`, `isFirstFiftyUser`, `bonusTokens`.
+- **Response Data:** זהה ל־`POST /api/session`, עם השדות `token`, `user`, `isNewUser`, `isFirstFiftyUser`, `bonusTokens`.
 
 ### 1.7 Logout
 - **Method:** `DELETE`
-- **Endpoint:** `/api/sessions/current`
+- **Endpoint:** `/api/session`
 - **Auth:** נדרש JWT
 - **Body:** אין
 - **Response Data:**
@@ -213,7 +214,7 @@ Authorization: Bearer <jwt>
 
 ### 1.8 Get Current Session
 - **Method:** `GET`
-- **Endpoint:** `/api/sessions/current`
+- **Endpoint:** `/api/session`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -238,7 +239,7 @@ Authorization: Bearer <jwt>
 
 ### 2.1 Get Current User Profile
 - **Method:** `GET`
-- **Endpoint:** `/api/users/current`
+- **Endpoint:** `/api/profile`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -289,7 +290,7 @@ Authorization: Bearer <jwt>
 
 ### 2.2 Update User Profile
 - **Method:** `PATCH`
-- **Endpoint:** `/api/users/current`
+- **Endpoint:** `/api/profile`
 - **Auth:** נדרש JWT
 - **Body:**
 
@@ -323,11 +324,11 @@ Authorization: Bearer <jwt>
 }
 ```
 
-- **Response Data:** אותו מבנה כמו `GET /api/users/current`.
+- **Response Data:** אותו מבנה כמו `GET /api/profile`.
 
 ### 2.3 Upload Profile Photo
 - **Method:** `PUT`
-- **Endpoint:** `/api/users/current/photo`
+- **Endpoint:** `/api/profile/photo`
 - **Auth:** נדרש JWT
 - **Content-Type:** `multipart/form-data`
 - **Body:** שדה קובץ בשם `file`
@@ -343,7 +344,7 @@ Authorization: Bearer <jwt>
 - **Method:** `GET`
 - **Endpoint:** `/api/users/{userId}`
 - **Auth:** נדרש JWT
-- **Response Data:** אותו מבנה כמו `GET /api/users/current`, אבל `secretQuestion` אינו מוחזר לשאר המשתמשים.
+- **Response Data:** אותו מבנה כמו `GET /api/profile`, אבל `secretQuestion` אינו מוחזר לשאר המשתמשים.
 
 ### 2.5 Get User Ratings
 - **Method:** `GET`
@@ -371,7 +372,7 @@ Authorization: Bearer <jwt>
 
 ### 3.1 Get Token Balance
 - **Method:** `GET`
-- **Endpoint:** `/api/token-balances/current`
+- **Endpoint:** `/api/wallet`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -493,7 +494,7 @@ Authorization: Bearer <jwt>
 
 ### 4.2 Get Course Categories
 - **Method:** `GET`
-- **Endpoint:** `/api/course-categories`
+- **Endpoint:** `/api/courses/categories`
 - **Auth:** נדרש JWT
 - **Response Data:**
 
@@ -693,9 +694,9 @@ Authorization: Bearer <jwt>
 
 ### 6.1 Get Recommended Tutors
 - **Method:** `GET`
-- **Endpoint:** `/api/tutor-recommendations`
+- **Endpoint:** `/api/tutors?recommended=true`
 - **Auth:** נדרש JWT
-- **Query Params:** `limit`, `minRating`
+- **Query Params:** `recommended=true`, `limit`, `minRating`
 - **Response Data:** מערך
 
 ```json
@@ -748,7 +749,7 @@ Authorization: Bearer <jwt>
 - **Endpoint:** `/api/tutors`
 - **Auth:** נדרש JWT
 - **Query Params:** `course`, `name`, `taughtMeBefore`, `minRating`, `limit`
-- **Response Data:** אותו מבנה כמו `GET /api/tutor-recommendations`
+- **Response Data:** אותו מבנה כמו `GET /api/tutors?recommended=true`
 
 ### 6.3 Get Tutor Profile
 - **Method:** `GET`

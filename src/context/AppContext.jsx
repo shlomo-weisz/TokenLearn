@@ -148,7 +148,7 @@ export function AppProvider({ children }) {
   };
 
   const syncCurrentUserProfile = async () => {
-    const payload = await apiRequest('/api/users/current');
+    const payload = await apiRequest('/api/profile');
     mergeUserState(setUser, payload);
     return payload;
   };
@@ -204,7 +204,7 @@ export function AppProvider({ children }) {
 
   const updateUserProfile = async (profileData) => {
     return apiCall(async () => {
-      const payload = await apiRequest('/api/users/current', {
+      const payload = await apiRequest('/api/profile', {
         method: 'PATCH',
         body: JSON.stringify(profileData)
       });
@@ -338,7 +338,7 @@ export function AppProvider({ children }) {
 
   const login = async (email, password) => {
     return apiCall(async () => {
-      const payload = await apiRequest('/api/sessions', {
+      const payload = await apiRequest('/api/session', {
         method: 'POST',
         body: JSON.stringify({ email, password })
       });
@@ -362,7 +362,7 @@ export function AppProvider({ children }) {
 
   const logout = async () => {
     const result = await apiCall(async () => {
-      await apiRequest('/api/sessions/current', {
+      await apiRequest('/api/session', {
         method: 'DELETE'
       });
       return { message: 'Logged out successfully' };
@@ -376,7 +376,7 @@ export function AppProvider({ children }) {
 
   const getSecretQuestion = async (email) => {
     return apiCall(async () => {
-      return apiRequest('/api/password-reset-questions', {
+      return apiRequest('/api/password-reset-requests', {
         method: 'POST',
         body: JSON.stringify({ email })
       });
@@ -385,7 +385,7 @@ export function AppProvider({ children }) {
 
   const verifySecretAnswer = async (email, secretAnswer) => {
     return apiCall(async () => {
-      return apiRequest('/api/password-reset-verifications', {
+      return apiRequest('/api/password-reset-tokens', {
         method: 'POST',
         body: JSON.stringify({ email, secretAnswer })
       });
@@ -394,7 +394,7 @@ export function AppProvider({ children }) {
 
   const resetPassword = async (email, resetToken, newPassword) => {
     return apiCall(async () => {
-      const payload = await apiRequest('/api/password-resets', {
+      const payload = await apiRequest('/api/password-reset-completions', {
         method: 'POST',
         body: JSON.stringify({ email, resetToken, newPassword })
       });
@@ -405,7 +405,7 @@ export function AppProvider({ children }) {
 
   const googleLogin = async (googleToken) => {
     return apiCall(async () => {
-      const payload = await apiRequest('/api/google-sessions', {
+      const payload = await apiRequest('/api/identity-providers/google/sessions', {
         method: 'POST',
         body: JSON.stringify({ googleToken })
       });
@@ -415,7 +415,7 @@ export function AppProvider({ children }) {
   };
 
   const verifyToken = async () => {
-    return apiCall(async () => apiRequest('/api/sessions/current'));
+    return apiCall(async () => apiRequest('/api/session'));
   };
 
   const getCurrentUserProfile = async () => {
@@ -427,7 +427,7 @@ export function AppProvider({ children }) {
       const formData = new FormData();
       formData.append('file', file);
 
-      const payload = await apiRequest('/api/users/current/photo', {
+      const payload = await apiRequest('/api/profile/photo', {
         method: 'PUT',
         body: formData
       });
@@ -446,7 +446,7 @@ export function AppProvider({ children }) {
 
   const getTokenBalance = async () => {
     return apiCall(async () => {
-      const payload = await apiRequest('/api/token-balances/current');
+      const payload = await apiRequest('/api/wallet');
       const total = payload.total ?? payload.balance ?? 0;
       mergeUserState(setUser, {
         tokenBalance: total,
@@ -504,13 +504,13 @@ export function AppProvider({ children }) {
 
   const getCourseCategories = async () => {
     return apiCall(async () => {
-      return apiRequest('/api/course-categories');
+      return apiRequest('/api/courses/categories');
     });
   };
 
   const getRecommendedTutors = async (limit = 10, minRating = 4) => {
     return apiCall(async () => {
-      return apiRequest(`/api/tutor-recommendations${toQueryString({ limit, minRating })}`);
+      return apiRequest(`/api/tutors${toQueryString({ recommended: true, limit, minRating })}`);
     });
   };
 
@@ -644,7 +644,7 @@ export function AppProvider({ children }) {
 
   const getUnreadNotificationCount = async () => {
     return apiCall(async () => {
-      const payload = await apiRequest('/api/notification-metrics');
+      const payload = await apiRequest('/api/notifications/statistics');
       const count = Number(payload?.count ?? 0);
       const normalizedCount = Number.isNaN(count) ? 0 : count;
       setUnreadNotificationCount(normalizedCount);
@@ -658,7 +658,7 @@ export function AppProvider({ children }) {
         method: 'PATCH',
         body: JSON.stringify({ ids })
       });
-      const countPayload = await apiRequest('/api/notification-metrics');
+      const countPayload = await apiRequest('/api/notifications/statistics');
       const count = Number(countPayload?.count ?? 0);
       setUnreadNotificationCount(Number.isNaN(count) ? 0 : count);
       return payload;
@@ -678,7 +678,7 @@ export function AppProvider({ children }) {
 
   const getAdminDashboard = async () => {
     return apiCall(async () => {
-      return apiRequest('/api/admin/summary');
+      return apiRequest('/api/admin/analytics/summary');
     });
   };
 
@@ -691,7 +691,7 @@ export function AppProvider({ children }) {
 
   const getAdminStatistics = async () => {
     return apiCall(async () => {
-      return apiRequest('/api/admin/metrics');
+      return apiRequest('/api/admin/analytics/statistics');
     });
   };
 
@@ -773,8 +773,8 @@ export function AppProvider({ children }) {
       setAuthToken(token);
 
       try {
-        await apiRequest('/api/sessions/current');
-        const payload = await apiRequest('/api/users/current');
+        await apiRequest('/api/session');
+        const payload = await apiRequest('/api/profile');
         if (isMounted) {
           mergeUserState(setUser, payload);
           unauthorizedNotifiedRef.current = false;
