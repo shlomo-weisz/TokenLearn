@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/useApp';
 import { useI18n } from '../i18n/useI18n';
+import { formatRating } from '../lib/numberUtils';
 import TokenBalanceMenu from './TokenBalanceMenu';
 import { useResponsiveLayout } from '../lib/responsive';
 
@@ -67,7 +68,7 @@ export default function HeaderTopBar({ tutorRating = null, onContactUs }) {
             textAlign: 'start'
           }}
         >
-          {t('headerTopBar.tutorRating')}: <b>{tutorRating ?? t('common.na')}</b>
+          {t('headerTopBar.tutorRating')}: <b>{tutorRating == null ? t('common.na') : formatRating(tutorRating)}</b>
         </div>
         <TokenBalanceMenu tokenSummary={tokenSummary} compact={isMobile} />
       </div>

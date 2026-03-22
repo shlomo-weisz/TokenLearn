@@ -7,6 +7,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useApp } from "../context/useApp";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
+import { formatRating } from "../lib/numberUtils";
 import { formatNotificationDate } from "../lib/notificationInbox";
 import { useResponsiveLayout } from "../lib/responsive";
 
@@ -326,7 +327,7 @@ export default function LessonPage() {
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{otherPersonName}</div>
                 {isStudent && lesson.tutorRating && (
                   <div style={{ fontSize: 14, color: "#f59e0b" }}>
-                    ⭐ {lesson.tutorRating} {isHe ? "דירוג" : "rating"}
+                    ⭐ {formatRating(lesson.tutorRating)} {isHe ? "דירוג" : "rating"}
                   </div>
                 )}
               </div>

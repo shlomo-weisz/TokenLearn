@@ -3,6 +3,7 @@ import BookLessonModal from "./BookLessonModal";
 import ViewProfileModal from "./ViewProfileModal";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseListDisplayName } from "../lib/courseUtils";
+import { formatRating } from "../lib/numberUtils";
 import { useResponsiveLayout } from "../lib/responsive";
 
 export default function RecommendedTutors({ tutors }) {
@@ -30,7 +31,7 @@ export default function RecommendedTutors({ tutors }) {
               return (
                 <div key={t.id} style={styles.card}>
                 <div style={styles.name}>{t.name}</div>
-                <div>{isHe ? 'דירוג' : 'Rating'}: <b>{t.rating}</b></div>
+                <div>{isHe ? 'דירוג' : 'Rating'}: <b>{formatRating(t.rating)}</b></div>
                 {coursesLabel && (
                   <div style={styles.course}>{coursesLabel}</div>
                 )}

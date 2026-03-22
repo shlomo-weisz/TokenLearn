@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import TokenHistoryList from "../components/TokenHistoryList";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayName, getCourseDisplayNameFromSource } from "../lib/courseUtils";
+import { formatRating } from "../lib/numberUtils";
 import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl, normalizePhotoUrl } from "../lib/validation";
 import { useResponsiveLayout } from "../lib/responsive";
 
@@ -591,7 +592,7 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td style={styles.td}>
-                          {Number(u.tutorRating ?? 0).toFixed(1)}
+                          {formatRating(u.tutorRating ?? 0)}
                         </td>
                         <td style={styles.td}>
                           <div style={styles.badgesWrap}>
@@ -772,7 +773,7 @@ export default function AdminPage() {
                             {getCourseDisplayNameFromSource(rating, language) || (isHe ? "לא זמין" : "N/A")}
                           </td>
                           <td style={styles.td}>
-                            <span style={styles.ratingBadge}>{Number(rating.rating ?? 0).toFixed(2)} ★</span>
+                            <span style={styles.ratingBadge}>{formatRating(rating.rating ?? 0)} ★</span>
                           </td>
                           <td style={styles.td}>
                             <div style={styles.ratingCommentPreview}>

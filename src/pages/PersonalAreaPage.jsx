@@ -7,6 +7,7 @@ import CourseAutocomplete from "../components/CourseAutocomplete";
 import { useI18n } from "../i18n/useI18n";
 import { dedupeCoursesById, normalizeCourse } from "../lib/courseUtils";
 import { normalizeDayToEnglish } from "../lib/dayUtils";
+import { formatRating } from "../lib/numberUtils";
 import { isSafeFreeText, isValidName, isValidPhone, isValidPhotoUrl, normalizePhotoUrl } from "../lib/validation";
 import { useResponsiveLayout } from "../lib/responsive";
 
@@ -505,7 +506,7 @@ export default function PersonalAreaPage() {
       }}>
         <div>
           <div style={{ fontSize: 14, color: "#475569" }}>{isHe ? "הדירוג שלך כמורה" : "Your tutor rating"}</div>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>{Number(user?.tutorRating ?? 0).toFixed(1)}</div>
+          <div style={{ fontSize: 28, fontWeight: 800 }}>{formatRating(user?.tutorRating ?? 0)}</div>
         </div>
         <div style={{
           padding: "10px 14px",

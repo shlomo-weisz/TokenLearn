@@ -3,6 +3,7 @@ import Button from "./Button";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayName, normalizeCourse } from "../lib/courseUtils";
 import { localizeDayName, sortAvailabilitySlotsByDayAndTime } from "../lib/dayUtils";
+import { formatRating } from "../lib/numberUtils";
 import { normalizePhotoUrl } from "../lib/validation";
 import { useResponsiveLayout } from "../lib/responsive";
 
@@ -64,7 +65,7 @@ export default function ViewProfileModal({ tutor, onClose, onBookLesson }) {
             <div style={{ flex: 1, width: isMobile ? '100%' : 'auto' }}>
               <h3 style={{ margin: "0 0 8px 0", fontSize: 22 }}>{tutor.name}</h3>
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 14, color: "#64748b" }}>
-                <div>⭐ {isHe ? "דירוג" : "Rating"}: <strong>{tutor.rating}</strong></div>
+                <div>⭐ {isHe ? "דירוג" : "Rating"}: <strong>{formatRating(tutor.rating)}</strong></div>
                 {tutor.lessons && <div>📚 {tutor.lessons} {isHe ? "שיעורים נלמדו" : "lessons taught"}</div>}
               </div>
             </div>

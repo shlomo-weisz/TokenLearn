@@ -12,6 +12,7 @@ import {
   sortAvailabilitySlotsByDayAndTime,
   toDateInputValue
 } from "../lib/dayUtils";
+import { formatRating } from "../lib/numberUtils";
 import { useResponsiveLayout } from "../lib/responsive";
 
 const LESSON_DURATION_MINUTES = 60;
@@ -197,7 +198,7 @@ export default function BookLessonModal({ tutor, onClose, onBook }) {
             <div style={{ display: "grid", gap: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>{tutor.name}</div>
               <div style={{ fontSize: 14, color: "#64748b" }}>
-                {isHe ? "דירוג" : "Rating"}: ⭐ {tutor.rating} • {tutorCoursesLabel || (isHe ? "אין קורסים זמינים" : "No courses listed")}
+                {isHe ? "דירוג" : "Rating"}: ⭐ {formatRating(tutor.rating)} • {tutorCoursesLabel || (isHe ? "אין קורסים זמינים" : "No courses listed")}
               </div>
               <div style={{ fontSize: 12, color: "#334155" }}>
                 {isHe

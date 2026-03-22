@@ -5,6 +5,7 @@ import CourseAutocomplete from "../components/CourseAutocomplete";
 import { useI18n } from "../i18n/useI18n";
 import { useApp } from "../context/useApp";
 import { dedupeCoursesById, getCourseListDisplayName, normalizeCourse } from "../lib/courseUtils";
+import { formatRating } from "../lib/numberUtils";
 import { useResponsiveLayout } from "../lib/responsive";
 
 export default function FindTutorPage() {
@@ -189,7 +190,7 @@ export default function FindTutorPage() {
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
                 <div style={{ color: "#475569", fontSize: 14 }}>
-                  {isHe ? "קורסים" : "Courses"}: {coursesLabel || (isHe ? "לא צוין" : "Not listed")} • {isHe ? "דירוג" : "Rating"}: {t.rating} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
+                  {isHe ? "קורסים" : "Courses"}: {coursesLabel || (isHe ? "לא צוין" : "Not listed")} • {isHe ? "דירוג" : "Rating"}: {formatRating(t.rating)} • {isHe ? "שיעורים" : "Lessons"}: {t.lessons ?? t.totalLessonsAsTutor ?? 0}
                 </div>
                 {t.taughtMeBefore && (
                   <div style={repeatTutorBadgeStyle}>

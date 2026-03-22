@@ -6,6 +6,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import { useI18n } from "../i18n/useI18n";
 import { getCourseDisplayNameFromSource } from "../lib/courseUtils";
 import { isValidDate, parseFlexibleDate, resolveLessonDateFromRequest } from "../lib/dateTimeUtils";
+import { formatRating } from "../lib/numberUtils";
 import { isPendingLessonRequest, normalizeLessonRequestStatus } from "../lib/lessonRequestUtils";
 import { localizeDayName } from "../lib/dayUtils";
 import { useResponsiveLayout } from "../lib/responsive";
@@ -335,7 +336,7 @@ export default function LessonRequestsPage() {
           <div>
             <h3 style={{ margin: 0, fontSize: 18 }}>{request.tutorName}</h3>
             <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>
-              ⭐ {request.tutorRating} • {getCourseDisplayNameFromSource(request, language)}
+              ⭐ {formatRating(request.tutorRating)} • {getCourseDisplayNameFromSource(request, language)}
             </div>
           </div>
           <div style={{ ...styles.statusBadge, background: statusStyle.bg, border: `1px solid ${statusStyle.border}`, color: statusStyle.text }}>
