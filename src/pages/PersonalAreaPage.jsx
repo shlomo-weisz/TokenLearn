@@ -117,7 +117,7 @@ export default function PersonalAreaPage() {
   const { language } = useI18n();
   const isHe = language === "he";
   const { isMobile, isTablet } = useResponsiveLayout();
-  const { user, updateUserProfile, loading, addNotification, getCourses } = useApp();
+  const { user, updateUserProfile, addNotification, getCourses } = useApp();
   const DAYS_OF_WEEK = isHe ? ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"] : EN_DAYS_OF_WEEK;
   const dayIndex = new Map(DAYS_OF_WEEK.map((day, index) => [day, index]));
   
@@ -128,6 +128,7 @@ export default function PersonalAreaPage() {
   const [photoUrl, setPhotoUrl] = useState(user?.photoUrl || "");
   const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Courses - initialize from user data or with defaults
   const [coursesAsTeacher, setCoursesAsTeacher] = useState(normalizeCourses(user?.coursesAsTeacher, 1));
@@ -142,6 +143,9 @@ export default function PersonalAreaPage() {
   const [aboutMeAsStudent, setAboutMeAsStudent] = useState(user?.aboutMeAsStudent || "");
 
   const generalComplete = Boolean(firstName.trim() && lastName.trim() && phone.trim());
+  const firstNameMissing = !firstName.trim();
+  const lastNameMissing = !lastName.trim();
+  const phoneMissing = !phone.trim();
   const previewPhotoUrl = normalizePhotoUrl(photoUrl);
   const hasUnsupportedPhotoUrl = Boolean(String(photoUrl || "").trim()) && !previewPhotoUrl;
   const blockedSectionMessage = isHe
@@ -151,6 +155,22 @@ export default function PersonalAreaPage() {
   const notifyBlockedSection = () => {
     addNotification(blockedSectionMessage, "info");
   };
+
+  useEffect(() => {
+    if (hasChanges) {
+      return;
+    }
+
+    setFirstName(user?.firstName || "");
+    setLastName(user?.lastName || "");
+    setPhone(user?.phone || "");
+    setPhotoUrl(user?.photoUrl || "");
+    setCoursesAsTeacher(normalizeCourses(user?.coursesAsTeacher, 1));
+    setCoursesAsStudent(normalizeCourses(user?.coursesAsStudent, 2));
+    setAvailabilityAsTeacher(normalizeAvailability(user?.availabilityAsTeacher, 3, DAYS_OF_WEEK));
+    setAboutMeAsTeacher(user?.aboutMeAsTeacher || "");
+    setAboutMeAsStudent(user?.aboutMeAsStudent || "");
+  }, [hasChanges, language, user]);
 
   useEffect(() => {
     let isMounted = true;
@@ -421,9 +441,14 @@ export default function PersonalAreaPage() {
     };
 
     // Save via context
-    const result = await updateUserProfile(profileData);
-    if (result.success) {
-      setHasChanges(false);
+    setIsSaving(true);
+    try {
+      const result = await updateUserProfile(profileData);
+      if (result.success) {
+        setHasChanges(false);
+      }
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -451,7 +476,7 @@ export default function PersonalAreaPage() {
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? 12 : 16, display: "grid", gap: 16, position: "relative" }}>
-      {loading && <LoadingSpinner fullScreen />}
+      {isSaving && <LoadingSpinner fullScreen text={isHe ? "שומר..." : "Saving..."} />}
       
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", flexDirection: isMobile ? "column" : "row", gap: 10 }}>
         <h1 style={{ marginTop: 0 }}>{isHe ? "אזור אישי" : "Personal Area"}</h1>
@@ -510,6 +535,46 @@ export default function PersonalAreaPage() {
 
       <section style={cardStyle}>
         <h2 style={{ margin: 0 }}>{isHe ? "כללי" : "General"}</h2>
+        {!generalComplete && (
+          <div style={{
+            border: "1px solid #bfdbfe",
+            background: "#eff6ff",
+            color: "#0f172a",
+            borderRadius: 12,
+            padding: 12,
+            fontSize: 14,
+            fontWeight: 600
+          }}>
+            {isHe
+              ? "כדי לפתוח את שאר השדות, מלא/י כאן קודם שם פרטי, שם משפחה וטלפון."
+              : "To unlock the rest of the profile, first complete your first name, last name, and phone here."}
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+          <Input
+            label={isHe ? "שם פרטי" : "First Name"}
+            value={firstName}
+            onChange={(v) => { setFirstName(v); setHasChanges(true); }}
+            placeholder={isHe ? "הכנס/י שם פרטי" : "Enter your first name"}
+            autoFocus={firstNameMissing}
+          />
+          <Input
+            label={isHe ? "שם משפחה" : "Last Name"}
+            value={lastName}
+            onChange={(v) => { setLastName(v); setHasChanges(true); }}
+            placeholder={isHe ? "הכנס/י שם משפחה" : "Enter your last name"}
+            autoFocus={!firstNameMissing && lastNameMissing}
+          />
+          <Input
+            label={isHe ? "טלפון" : "Phone Number"}
+            value={phone}
+            onChange={(v) => { setPhone(v); setHasChanges(true); }}
+            placeholder={isHe ? "למשל: +972 50 123 4567" : "e.g., +1 555 123 4567"}
+            dir="ltr"
+            inputMode="tel"
+            autoFocus={!firstNameMissing && !lastNameMissing && phoneMissing}
+          />
+        </div>
         <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", gap: 12, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div
             style={{
@@ -567,17 +632,6 @@ export default function PersonalAreaPage() {
             {isHe ? "לא ניתן לטעון את התמונה מהקישור שסופק." : "Could not load the image from the provided URL."}
           </div>
         )}
-
-        <Input label={isHe ? "שם פרטי" : "First Name"} value={firstName} onChange={(v) => { setFirstName(v); setHasChanges(true); }} placeholder={isHe ? "הכנס/י שם פרטי" : "Enter your first name"} />
-        <Input label={isHe ? "שם משפחה" : "Last Name"} value={lastName} onChange={(v) => { setLastName(v); setHasChanges(true); }} placeholder={isHe ? "הכנס/י שם משפחה" : "Enter your last name"} />
-        <Input
-          label={isHe ? "טלפון" : "Phone Number"}
-          value={phone}
-          onChange={(v) => { setPhone(v); setHasChanges(true); }}
-          placeholder={isHe ? "למשל: +972 50 123 4567" : "e.g., +1 555 123 4567"}
-          dir="ltr"
-          inputMode="tel"
-        />
       </section>
 
       <section style={cardStyle}>
@@ -943,7 +997,7 @@ export default function PersonalAreaPage() {
           }
         }}
       >
-        <Button onClick={handleSave} disabled={!generalComplete} style={{ width: isMobile ? "100%" : "auto" }}>{isHe ? "שמירה" : "Save"}</Button>
+        <Button onClick={handleSave} disabled={!generalComplete || isSaving} style={{ width: isMobile ? "100%" : "auto" }}>{isHe ? "שמירה" : "Save"}</Button>
       </div>
     </div>
   );
